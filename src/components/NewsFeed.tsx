@@ -8,26 +8,41 @@ import CategoriesNav from "@/components/CategoriesNav";
 import NewsSlider from "@/components/NewsSlider";
 import NewsCard from "@/components/NewsCard";
 import BottomNav from "@/components/BottomNav";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import SearchOverlay from "@/components/SearchOverlay";
 
-interface NewsFeedProps {
-  language: "AR" | "EN";
-}
-
-const NewsFeed = ({ language }: NewsFeedProps) => {
+const NewsFeed = () => {
+  const [language, setLanguage] = useState<"AR" | "EN">(() => {
+    return (localStorage.getItem("eram_lang") as "AR" | "EN") || "AR";
+  });
   const categories = language === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [limit, setLimit] = useState(20);
+  const [showSearch, setShowSearch] = useState(false);
   const { articles, loading } = useArticles(language, activeCategory, limit);
+
+  const handleLanguageChange = (lang: "AR" | "EN") => {
+    setLanguage(lang);
+    localStorage.setItem("eram_lang", lang);
+    const cats = lang === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
+    setActiveCategory(cats[0]);
+    setLimit(20);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-16">
+      {showSearch && <SearchOverlay language={language} onClose={() => setShowSearch(false)} />}
       <BreakingNewsBar language={language} />
-      <Header />
+      <Header
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        onSearchToggle={() => setShowSearch(true)}
+      />
       <TickerBar />
       <CategoriesNav
         categories={categories}
         activeCategory={activeCategory}
-        onSelect={setActiveCategory}
+        onSelect={(cat) => { setActiveCategory(cat); setLimit(20); }}
       />
       <NewsSlider language={language} />
       
@@ -49,8 +64,8 @@ const NewsFeed = ({ language }: NewsFeedProps) => {
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {language === "AR" ? "لا توجد أخبار حالياً. أضف مصادر من لوحة التحكم." : "No news yet. Add sources from admin panel."}
+            <p className="text-muted-foreground text-sm">
+              {language === "AR" ? "جاري تحميل الأخبار..." : "Loading news..."}
             </p>
           </div>
         ) : (
@@ -71,6 +86,7 @@ const NewsFeed = ({ language }: NewsFeedProps) => {
         </div>
       )}
 
+      <WhatsAppButton />
       <BottomNav />
     </div>
   );
