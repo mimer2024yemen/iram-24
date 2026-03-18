@@ -87,6 +87,8 @@ const NewsFeed = () => {
         </div>
       )}
 
+      <ManualArticlesSection language={language} />
+
       <WhatsAppButton />
       <BottomNav />
     </div>
