@@ -10,6 +10,7 @@ import NewsCard from "@/components/NewsCard";
 import BottomNav from "@/components/BottomNav";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SearchOverlay from "@/components/SearchOverlay";
+import ManualArticlesSection from "@/components/ManualArticlesSection";
 
 const NewsFeed = () => {
   const [language, setLanguage] = useState<"AR" | "EN">(() => {
