@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 import SourceManager from "@/components/admin/SourceManager";
 import FetchControl from "@/components/admin/FetchControl";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
-import { LogOut, Database, BarChart3, Rss } from "lucide-react";
+import RssDetector from "@/components/admin/RssDetector";
+import ArticleEditor from "@/components/admin/ArticleEditor";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "sources" | "fetch">("analytics");
+  const [tab, setTab] = useState<"analytics" | "sources" | "fetch" | "detector" | "editor">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -28,10 +30,18 @@ const AdminDashboard = () => {
 
   if (!isAdmin) return null;
 
+  const handleAddSourceFromDetector = (url: string, name: string) => {
+    setTab("sources");
+    // We'll pass through state - for simplicity just switch tab
+    // The admin can then manually add it
+  };
+
   const tabs = [
-    { id: "analytics" as const, label: "الإحصائيات", icon: BarChart3 },
+    { id: "analytics" as const, label: "إحصائيات", icon: BarChart3 },
     { id: "sources" as const, label: "المصادر", icon: Rss },
     { id: "fetch" as const, label: "الجلب", icon: Database },
+    { id: "detector" as const, label: "كاشف", icon: Search },
+    { id: "editor" as const, label: "مقال", icon: PenSquare },
   ];
 
   return (
@@ -43,16 +53,16 @@ const AdminDashboard = () => {
         </button>
       </header>
 
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto scrollbar-hide">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+            className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-medium transition-colors ${
               tab === id ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
             }`}
           >
-            <Icon size={16} />
+            <Icon size={14} />
             {label}
           </button>
         ))}
@@ -62,6 +72,8 @@ const AdminDashboard = () => {
         {tab === "analytics" && <AnalyticsDashboard />}
         {tab === "sources" && <SourceManager />}
         {tab === "fetch" && <FetchControl />}
+        {tab === "detector" && <RssDetector onAddSource={handleAddSourceFromDetector} />}
+        {tab === "editor" && <ArticleEditor />}
       </div>
     </div>
   );
