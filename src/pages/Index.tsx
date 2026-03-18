@@ -1,16 +1,34 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useNavigate } from "react-router-dom";
+import eramLogo from "@/assets/eram-logo.png";
+import { Globe, BookOpen } from "lucide-react";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6" dir="rtl">
+      <img src={eramLogo} alt="Eram News" className="h-24 object-contain mb-8" />
+      <h1 className="text-foreground text-2xl font-bold mb-2 font-arabic">إيرام نيوز</h1>
+      <p className="text-muted-foreground text-sm mb-10">اختر القسم الذي ترغب بمتابعته</p>
+
+      <div className="flex flex-col gap-4 w-full max-w-xs">
+        <button
+          onClick={() => navigate("/arabic")}
+          className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-lg transition-transform active:scale-[0.97] shadow-lg"
+        >
+          <BookOpen size={24} />
+          أخبار عربية
+        </button>
+        <button
+          onClick={() => navigate("/global")}
+          className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-xl bg-secondary text-secondary-foreground font-bold text-lg transition-transform active:scale-[0.97] border border-border"
+        >
+          <Globe size={24} />
+          Global News
+        </button>
+      </div>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
