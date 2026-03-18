@@ -26,6 +26,7 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 20
         .from("articles")
         .select("*")
         .eq("language", language)
+        .eq("is_manual", false)
         .order("published_at", { ascending: false })
         .limit(limit);
 

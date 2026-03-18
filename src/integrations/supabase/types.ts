@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       articles: {
         Row: {
+          author_image_url: string | null
+          author_name: string | null
           category: string
           content: string | null
           created_at: string
@@ -23,6 +25,7 @@ export type Database = {
           hash: string
           id: string
           image_url: string | null
+          is_manual: boolean
           language: string
           published_at: string | null
           source_id: string | null
@@ -31,6 +34,8 @@ export type Database = {
           views: number | null
         }
         Insert: {
+          author_image_url?: string | null
+          author_name?: string | null
           category?: string
           content?: string | null
           created_at?: string
@@ -38,6 +43,7 @@ export type Database = {
           hash: string
           id?: string
           image_url?: string | null
+          is_manual?: boolean
           language: string
           published_at?: string | null
           source_id?: string | null
@@ -46,6 +52,8 @@ export type Database = {
           views?: number | null
         }
         Update: {
+          author_image_url?: string | null
+          author_name?: string | null
           category?: string
           content?: string | null
           created_at?: string
@@ -53,6 +61,7 @@ export type Database = {
           hash?: string
           id?: string
           image_url?: string | null
+          is_manual?: boolean
           language?: string
           published_at?: string | null
           source_id?: string | null
