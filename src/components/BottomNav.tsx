@@ -8,18 +8,18 @@ const BottomNav = () => {
   const tabs = [
     { icon: Settings, label: "الإعدادات", path: "/settings" },
     { icon: Heart, label: "المفضلة", path: "/favorites" },
-    { icon: Grid3X3, label: "الأقسام", path: "/categories" },
+    { icon: Grid3X3, label: "الأقسام", path: "/" },
     { icon: Home, label: "الرئيسية", path: "/" },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
       <div className="flex items-center justify-around py-2" dir="rtl">
-        {tabs.map(({ icon: Icon, label, path }) => {
-          const isActive = location.pathname === path;
+        {tabs.map(({ icon: Icon, label, path }, i) => {
+          const isActive = i === 3 ? location.pathname === "/" : location.pathname === path && i !== 3;
           return (
             <button
-              key={path}
+              key={label}
               onClick={() => navigate(path)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 ${
                 isActive ? "text-primary" : "text-muted-foreground"
