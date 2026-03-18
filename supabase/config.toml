@@ -2,3 +2,7 @@ project_id = "twqwwtgayqhjuyzngejr"
 
 [functions.fetch-news]
 verify_jwt = false
+
+[functions.setup-admin]
+verify_jwt = false
+
