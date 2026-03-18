@@ -14,16 +14,196 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      articles: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          description: string | null
+          hash: string
+          id: string
+          image_url: string | null
+          language: string
+          published_at: string | null
+          source_id: string | null
+          title: string
+          url: string
+          views: number | null
+        }
+        Insert: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          hash: string
+          id?: string
+          image_url?: string | null
+          language: string
+          published_at?: string | null
+          source_id?: string | null
+          title: string
+          url: string
+          views?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          hash?: string
+          id?: string
+          image_url?: string | null
+          language?: string
+          published_at?: string | null
+          source_id?: string | null
+          title?: string
+          url?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "news_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fetch_settings: {
+        Row: {
+          auto_fetch_enabled: boolean
+          created_at: string
+          fetch_interval: number
+          id: string
+          last_fetch_count: number | null
+          last_fetch_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_fetch_enabled?: boolean
+          created_at?: string
+          fetch_interval?: number
+          id?: string
+          last_fetch_count?: number | null
+          last_fetch_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_fetch_enabled?: boolean
+          created_at?: string
+          fetch_interval?: number
+          id?: string
+          last_fetch_count?: number | null
+          last_fetch_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      news_sources: {
+        Row: {
+          article_count: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          language: string
+          last_fetch: string | null
+          last_fetch_status: string | null
+          name: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          article_count?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language: string
+          last_fetch?: string | null
+          last_fetch_status?: string | null
+          name: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          article_count?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          last_fetch?: string | null
+          last_fetch_status?: string | null
+          name?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      page_views: {
+        Row: {
+          article_id: string | null
+          created_at: string
+          id: string
+          page_path: string
+          session_id: string
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string
+          id?: string
+          page_path: string
+          session_id: string
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string
+          id?: string
+          page_path?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +330,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+    },
   },
 } as const
