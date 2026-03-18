@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from "crypto";
-
 export function getSessionId(): string {
   let id = localStorage.getItem("eram_session_id");
   if (!id) {
