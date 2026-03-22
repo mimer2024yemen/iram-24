@@ -5,6 +5,7 @@ export interface Article {
   id: string;
   title: string;
   description: string | null;
+  content: string | null;
   url: string;
   image_url: string | null;
   category: string;
@@ -13,20 +14,22 @@ export interface Article {
   views: number | null;
   source_id: string | null;
   created_at: string;
+  author_name: string | null;
+  author_image_url: string | null;
+  is_manual: boolean;
 }
 
-export function useArticles(language: "AR" | "EN", category?: string, limit = 20) {
+export function useArticles(language: "AR" | "EN", category?: string, limit = 15) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchArticles = async () => {
       setLoading(true);
       let q = supabase
         .from("articles")
         .select("*")
         .eq("language", language)
-        .eq("is_manual", false)
         .order("published_at", { ascending: false })
         .limit(limit);
 
@@ -38,12 +41,12 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 20
       setArticles((data as Article[]) || []);
       setLoading(false);
     };
-    fetch();
+    fetchArticles();
 
     const channel = supabase
       .channel("articles-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
-        fetch();
+        fetchArticles();
       })
       .subscribe();
 

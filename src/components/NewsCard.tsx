@@ -1,7 +1,8 @@
-import { Heart, Share2, Link as LinkIcon } from "lucide-react";
+import { Heart, Share2 } from "lucide-react";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo, toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface NewsCardProps {
   article: Article;
@@ -10,32 +11,36 @@ interface NewsCardProps {
 
 const NewsCard = ({ article, language }: NewsCardProps) => {
   const [favs, setFavs] = useState(getFavorites());
+  const navigate = useNavigate();
   const isFav = favs.includes(article.id);
 
-  const handleFav = () => {
-    const updated = toggleFavorite(article.id);
-    setFavs(updated);
+  const handleFav = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavs(toggleFavorite(article.id));
   };
 
-  const handleShare = async () => {
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/article/${article.id}`;
+    const text = `${article.title} - إيرام24\n${url}`;
     if (navigator.share) {
-      await navigator.share({ title: article.title, url: article.url });
+      await navigator.share({ title: article.title, text, url });
+    } else {
+      await navigator.clipboard.writeText(text);
     }
   };
 
-  const handleWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(article.title + " " + article.url)}`, "_blank");
-  };
-
   return (
-    <div className="border-b border-border pb-4" dir={language === "AR" ? "rtl" : "ltr"}>
+    <div
+      className="border-b border-border pb-4 cursor-pointer"
+      dir={language === "AR" ? "rtl" : "ltr"}
+      onClick={() => navigate(`/article/${article.id}`)}
+    >
       <div className={`grid ${article.image_url ? "grid-cols-[1fr_100px]" : "grid-cols-1"} gap-3`}>
         <div className="flex flex-col justify-between min-h-[100px]">
           <div>
             <h3 className="text-foreground font-bold text-[15px] leading-snug line-clamp-2 mb-1">
-              <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                {article.title}
-              </a>
+              {article.title}
             </h3>
             {article.description && (
               <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
@@ -50,11 +55,8 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
               <span className="text-muted-foreground">{timeAgo(article.published_at, language)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleWhatsApp} className="text-muted-foreground hover:text-green-400 transition-colors">
-                <Share2 size={14} />
-              </button>
               <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-                <LinkIcon size={14} />
+                <Share2 size={14} />
               </button>
               <button onClick={handleFav} className="transition-transform active:scale-110">
                 <Heart size={14} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} />
@@ -64,12 +66,7 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
         </div>
         {article.image_url && (
           <div className="w-[100px] h-[100px] rounded-lg overflow-hidden bg-secondary shrink-0">
-            <img
-              src={article.image_url}
-              alt={article.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
           </div>
         )}
       </div>
