@@ -6,3 +6,8 @@ verify_jwt = false
 [functions.setup-admin]
 verify_jwt = false
 
+[functions.detect-rss]
+verify_jwt = false
+
+[functions.ai-news-helper]
+verify_jwt = false
