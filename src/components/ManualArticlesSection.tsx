@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo } from "@/lib/newsUtils";
@@ -9,6 +10,7 @@ interface ManualArticlesSectionProps {
 
 const ManualArticlesSection = ({ language }: ManualArticlesSectionProps) => {
   const [articles, setArticles] = useState<Article[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchManual = async () => {
@@ -25,9 +27,7 @@ const ManualArticlesSection = ({ language }: ManualArticlesSectionProps) => {
 
     const channel = supabase
       .channel(`manual-articles-${language}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
-        fetchManual();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => { fetchManual(); })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -45,40 +45,25 @@ const ManualArticlesSection = ({ language }: ManualArticlesSectionProps) => {
       </div>
       <div className="space-y-3">
         {articles.map((article) => (
-          <div key={article.id} className="bg-card rounded-xl overflow-hidden border border-border">
+          <div key={article.id} className="bg-card rounded-xl overflow-hidden border border-border cursor-pointer"
+            onClick={() => navigate(`/article/${article.id}`)}>
             {article.image_url && (
-              <img
-                src={article.image_url}
-                alt={article.title}
-                className="w-full aspect-video object-contain bg-secondary"
-                loading="lazy"
-              />
+              <img src={article.image_url} alt={article.title} className="w-full aspect-video object-contain bg-secondary" loading="lazy" />
             )}
             <div className="p-3">
               <div className="flex items-center gap-2 mb-2">
-                {(article as any).author_image_url && (
-                  <img
-                    src={(article as any).author_image_url}
-                    alt={(article as any).author_name || ""}
-                    className="w-6 h-6 rounded-full object-cover shrink-0"
-                  />
+                {article.author_image_url && (
+                  <img src={article.author_image_url} alt={article.author_name || ""} className="w-6 h-6 rounded-full object-cover shrink-0" />
                 )}
-                <h4 className="text-foreground font-bold text-sm leading-snug line-clamp-2 flex-1">
-                  {article.title}
-                </h4>
+                <h4 className="text-foreground font-bold text-sm leading-snug line-clamp-2 flex-1">{article.title}</h4>
               </div>
               {article.description && (
-                <p className="text-muted-foreground text-xs leading-relaxed line-clamp-3 mb-2">
-                  {article.description}
-                </p>
+                <p className="text-muted-foreground text-xs leading-relaxed line-clamp-3 mb-2">{article.description}</p>
               )}
               <div className="flex items-center gap-2 text-[10px]">
                 <span className="text-primary font-medium">{article.category}</span>
-                {(article as any).author_name && (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-muted-foreground">{(article as any).author_name}</span>
-                  </>
+                {article.author_name && (
+                  <><span className="text-muted-foreground">•</span><span className="text-muted-foreground">{article.author_name}</span></>
                 )}
                 <span className="text-muted-foreground">•</span>
                 <span className="text-muted-foreground">{timeAgo(article.published_at, language)}</span>
