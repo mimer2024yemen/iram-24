@@ -18,7 +18,7 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
         .eq("language", language)
         .order("published_at", { ascending: false })
         .limit(5);
-      if (data) setHeadlines(data.map((a) => a.title));
+      if (data) setHeadlines(data.map((a) => decodeHtmlEntities(a.title)));
     };
     fetchBreaking();
     const interval = setInterval(fetchBreaking, 30000);
