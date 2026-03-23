@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Article } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
+import { decodeHtmlEntities } from "@/lib/newsUtils";
 
 interface BreakingNewsBarProps {
   language: "AR" | "EN";
