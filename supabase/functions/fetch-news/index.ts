@@ -35,10 +35,10 @@ function parseRSSXML(xml: string): Array<{
       return m ? (m[1] || m[2] || "").trim() : "";
     };
 
-    const title = getTag("title");
+    const title = getTag("title").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_: string, code: string) => String.fromCharCode(parseInt(code)));
     const link = getTag("link");
     const rawDesc = getTag("description");
-    const description = rawDesc.replace(/<[^>]*>/g, "").substring(0, 500);
+    const description = rawDesc.replace(/<[^>]*>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_: string, code: string) => String.fromCharCode(parseInt(code))).substring(0, 500);
     const pubDate = getTag("pubDate");
 
     // Get full content from content:encoded

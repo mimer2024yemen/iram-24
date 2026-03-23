@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
+import { decodeHtmlEntities } from "@/lib/newsUtils";
 
 interface NewsSliderProps {
   language: "AR" | "EN";
@@ -10,6 +11,7 @@ interface NewsSliderProps {
 const NewsSlider = ({ language }: NewsSliderProps) => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [current, setCurrent] = useState(0);
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +36,7 @@ const NewsSlider = ({ language }: NewsSliderProps) => {
   if (articles.length === 0) return null;
 
   const article = articles[current];
+  const hasImage = article?.image_url && !imgErrors.has(article.id);
 
   return (
     <div
@@ -41,15 +44,22 @@ const NewsSlider = ({ language }: NewsSliderProps) => {
       dir={language === "AR" ? "rtl" : "ltr"}
       onClick={() => navigate(`/article/${article.id}`)}
     >
-      {article?.image_url && (
-        <img src={article.image_url} alt={article.title} className="absolute inset-0 w-full h-full object-cover" />
+      {hasImage && (
+        <img
+          src={article.image_url!}
+          alt={decodeHtmlEntities(article.title)}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => setImgErrors(prev => new Set(prev).add(article.id))}
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <span className="inline-block bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded mb-2">
           {language === "AR" ? "الأحدث" : "Latest"}
         </span>
-        <h2 className="text-foreground text-lg font-bold leading-tight line-clamp-2">{article?.title}</h2>
+        <h2 className="text-foreground text-lg font-bold leading-tight line-clamp-2">
+          {decodeHtmlEntities(article?.title || "")}
+        </h2>
       </div>
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
         {articles.map((_, i) => (
