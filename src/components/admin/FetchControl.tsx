@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Play, Pause } from "lucide-react";
+import { RefreshCw, CheckCircle } from "lucide-react";
 
 const FetchControl = () => {
   const [settings, setSettings] = useState<any>(null);
   const [fetching, setFetching] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadSettings = async () => {
     const { data } = await supabase.from("fetch_settings").select("*").limit(1).single();
@@ -14,16 +13,6 @@ const FetchControl = () => {
   };
 
   useEffect(() => { loadSettings(); }, []);
-
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (settings?.auto_fetch_enabled) {
-      intervalRef.current = setInterval(() => {
-        handleFetchNow();
-      }, (settings.fetch_interval || 2) * 60 * 1000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [settings?.auto_fetch_enabled, settings?.fetch_interval]);
 
   const handleFetchNow = async () => {
     setFetching(true);
@@ -42,18 +31,6 @@ const FetchControl = () => {
     loadSettings();
   };
 
-  const toggleAutoFetch = async () => {
-    if (!settings) return;
-    await supabase.from("fetch_settings").update({ auto_fetch_enabled: !settings.auto_fetch_enabled }).eq("id", settings.id);
-    loadSettings();
-  };
-
-  const updateInterval = async (val: number) => {
-    if (!settings) return;
-    await supabase.from("fetch_settings").update({ fetch_interval: val }).eq("id", settings.id);
-    loadSettings();
-  };
-
   if (!settings) return <p className="text-muted-foreground text-sm">جاري التحميل...</p>;
 
   return (
@@ -61,34 +38,15 @@ const FetchControl = () => {
       <h2 className="text-foreground font-bold">التحكم بالجلب التلقائي</h2>
 
       <div className="bg-secondary rounded-lg p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-foreground text-sm">الجلب التلقائي</span>
-          <button onClick={toggleAutoFetch}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              settings.auto_fetch_enabled ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"
-            }`}>
-            {settings.auto_fetch_enabled ? <><Pause size={14} /> مفعل</> : <><Play size={14} /> معطل</>}
-          </button>
-        </div>
-
-        <div>
-          <label className="text-foreground text-sm mb-2 block">الفترة الزمنية</label>
-          <div className="flex gap-2">
-            {[1, 2, 5, 10].map((v) => (
-              <button key={v} onClick={() => updateInterval(v)}
-                className={`flex-1 py-2 rounded-lg text-sm ${
-                  settings.fetch_interval === v ? "bg-primary text-primary-foreground" : "bg-input text-muted-foreground"
-                }`}>
-                {v} دقيقة
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2 bg-green-500/10 text-green-400 p-3 rounded-lg text-sm">
+          <CheckCircle size={16} />
+          <span>الجلب التلقائي مفعّل — يعمل كل دقيقتين عبر مجدول الخادم (Cron Job)</span>
         </div>
 
         <button onClick={handleFetchNow} disabled={fetching}
           className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
           <RefreshCw size={16} className={fetching ? "animate-spin" : ""} />
-          {fetching ? "جاري الجلب..." : "جلب الآن"}
+          {fetching ? "جاري الجلب..." : "جلب يدوي الآن"}
         </button>
 
         {result && (
