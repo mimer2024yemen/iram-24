@@ -1,6 +1,6 @@
 import { Heart, Share2 } from "lucide-react";
 import { Article } from "@/hooks/useArticles";
-import { timeAgo, toggleFavorite, getFavorites } from "@/lib/newsUtils";
+import { timeAgo, toggleFavorite, getFavorites, decodeHtmlEntities } from "@/lib/newsUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -11,6 +11,7 @@ interface NewsCardProps {
 
 const NewsCard = ({ article, language }: NewsCardProps) => {
   const [favs, setFavs] = useState(getFavorites());
+  const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
   const isFav = favs.includes(article.id);
 
@@ -22,13 +23,17 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/article/${article.id}`;
-    const text = `${article.title} - إيرام24\n${url}`;
+    const text = `${decodeHtmlEntities(article.title)} - إيرام24\n${url}`;
     if (navigator.share) {
-      await navigator.share({ title: article.title, text, url });
+      await navigator.share({ title: decodeHtmlEntities(article.title), text, url });
     } else {
       await navigator.clipboard.writeText(text);
     }
   };
+
+  const showImage = article.image_url && !imgError;
+  const title = decodeHtmlEntities(article.title);
+  const desc = article.description ? decodeHtmlEntities(article.description) : null;
 
   return (
     <div
@@ -36,15 +41,23 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
       dir={language === "AR" ? "rtl" : "ltr"}
       onClick={() => navigate(`/article/${article.id}`)}
     >
-      <div className={`grid ${article.image_url ? "grid-cols-[1fr_100px]" : "grid-cols-1"} gap-3`}>
-        <div className="flex flex-col justify-between min-h-[100px]">
+      <div className={`grid ${showImage ? "grid-cols-[1fr_100px]" : "grid-cols-1"} gap-3`}>
+        <div className="flex flex-col justify-between min-h-[80px]">
           <div>
+            {article.author_name && (
+              <div className="flex items-center gap-1.5 mb-1">
+                {article.author_image_url && (
+                  <img src={article.author_image_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                )}
+                <span className="text-muted-foreground text-[10px]">{article.author_name}</span>
+              </div>
+            )}
             <h3 className="text-foreground font-bold text-[15px] leading-snug line-clamp-2 mb-1">
-              {article.title}
+              {title}
             </h3>
-            {article.description && (
+            {desc && (
               <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
-                {article.description}
+                {desc}
               </p>
             )}
           </div>
@@ -64,9 +77,15 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
             </div>
           </div>
         </div>
-        {article.image_url && (
+        {showImage && (
           <div className="w-[100px] h-[100px] rounded-lg overflow-hidden bg-secondary shrink-0">
-            <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={article.image_url!}
+              alt={title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
           </div>
         )}
       </div>
