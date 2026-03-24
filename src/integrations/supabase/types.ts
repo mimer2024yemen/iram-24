@@ -112,39 +112,54 @@ export type Database = {
       news_sources: {
         Row: {
           article_count: number | null
+          category: string | null
           created_at: string
+          feed_url: string | null
+          fetch_type: string
           id: string
           is_active: boolean
           language: string
           last_fetch: string | null
           last_fetch_status: string | null
           name: string
+          slug: string | null
           updated_at: string
           url: string
+          website_url: string | null
         }
         Insert: {
           article_count?: number | null
+          category?: string | null
           created_at?: string
+          feed_url?: string | null
+          fetch_type?: string
           id?: string
           is_active?: boolean
           language: string
           last_fetch?: string | null
           last_fetch_status?: string | null
           name: string
+          slug?: string | null
           updated_at?: string
           url: string
+          website_url?: string | null
         }
         Update: {
           article_count?: number | null
+          category?: string | null
           created_at?: string
+          feed_url?: string | null
+          fetch_type?: string
           id?: string
           is_active?: boolean
           language?: string
           last_fetch?: string | null
           last_fetch_status?: string | null
           name?: string
+          slug?: string | null
           updated_at?: string
           url?: string
+          website_url?: string | null
         }
         Relationships: []
       }
