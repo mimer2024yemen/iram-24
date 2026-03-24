@@ -1,6 +1,11 @@
 export function decodeHtmlEntities(text: string): string {
   if (!text) return text;
   return text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#8220;/g, "\u201C")
+    .replace(/&#8221;/g, "\u201D")
+    .replace(/&#8216;/g, "\u2018")
+    .replace(/&#8217;/g, "\u2019")
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
