@@ -8,7 +8,8 @@ import RssDetector from "@/components/admin/RssDetector";
 import ArticleEditor from "@/components/admin/ArticleEditor";
 import NewsManager from "@/components/admin/NewsManager";
 import AdminAI from "@/components/admin/AdminAI";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles } from "lucide-react";
+import SourceAnalyzer from "@/components/admin/SourceAnalyzer";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
