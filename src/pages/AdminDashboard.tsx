@@ -29,6 +29,7 @@ const AdminDashboard = () => {
     { id: "sources" as const, label: "المصادر", icon: Rss },
     { id: "fetch" as const, label: "الجلب", icon: Database },
     { id: "detector" as const, label: "كاشف", icon: Search },
+    { id: "analyzer" as const, label: "محلل", icon: Radar },
     { id: "editor" as const, label: "مقال", icon: PenSquare },
     { id: "ai" as const, label: "AI", icon: Sparkles },
   ];
