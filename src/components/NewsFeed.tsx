@@ -50,13 +50,13 @@ const NewsFeed = () => {
       {showSearch && <SearchOverlay language={language} onClose={() => setShowSearch(false)} />}
       <Sidebar open={showSidebar} onClose={() => setShowSidebar(false)} language={language} onCategorySelect={handleCategorySelect} />
       
-      <BreakingNewsBar language={language} />
       <Header
         language={language}
         onLanguageChange={handleLanguageChange}
         onMenuToggle={() => setShowSidebar(true)}
         onSearchToggle={() => setShowSearch(true)}
       />
+      <BreakingNewsBar language={language} />
       <TickerBar />
       <CategoriesNav
         categories={categories}

@@ -24,29 +24,33 @@ const Header = ({ language, onLanguageChange, onMenuToggle, onSearchToggle }: He
         <img src={eramLogo} alt="Eram News" className="h-10 object-contain" />
       </button>
 
-      {/* Left: Search + Language */}
-      <div className="flex items-center gap-1">
+      {/* Left: Search + Language Toggles */}
+      <div className="flex items-center gap-2">
         <button onClick={onSearchToggle} className="p-2 text-foreground">
-          <Search size={20} />
+          <Search size={22} />
         </button>
-        <div className="flex bg-secondary rounded-lg p-0.5 gap-0.5">
-          <button
-            onClick={() => onLanguageChange("AR")}
-            className={`px-2 py-1 rounded-md text-[10px] font-bold transition-colors ${
-              language === "AR" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            عربي
-          </button>
-          <button
-            onClick={() => onLanguageChange("EN")}
-            className={`px-2 py-1 rounded-md text-[10px] font-bold transition-colors ${
-              language === "EN" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            EN
-          </button>
-        </div>
+        <button
+          onClick={() => onLanguageChange("AR")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+            language === "AR"
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "bg-secondary text-muted-foreground hover:bg-accent"
+          }`}
+        >
+          <span className="text-base">🇸🇦</span>
+          <span>اخبار عربية</span>
+        </button>
+        <button
+          onClick={() => onLanguageChange("EN")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+            language === "EN"
+              ? "bg-primary text-primary-foreground shadow-md"
+              : "bg-secondary text-muted-foreground hover:bg-accent"
+          }`}
+        >
+          <span className="text-base">🌍</span>
+          <span>World News</span>
+        </button>
       </div>
     </header>
   );
