@@ -81,7 +81,10 @@ serve(async (req) => {
       if (feeds.some(f => f.url === testUrl)) continue;
       try {
         const testRes = await fetch(testUrl, {
-          headers: { "User-Agent": "EramNews/1.0" },
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/rss+xml,application/xml,text/xml,*/*;q=0.8",
+          },
           redirect: "follow",
         });
         if (testRes.ok) {
