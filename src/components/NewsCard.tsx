@@ -31,7 +31,7 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
     }
   };
 
-  const showImage = article.image_url && !imgError;
+  const showImage = !!(article.image_url && article.image_url.trim() !== '' && !imgError);
   const title = decodeHtmlEntities(article.title);
   const desc = article.description ? decodeHtmlEntities(article.description) : null;
 
