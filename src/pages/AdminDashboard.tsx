@@ -9,12 +9,14 @@ import ArticleEditor from "@/components/admin/ArticleEditor";
 import NewsManager from "@/components/admin/NewsManager";
 import AdminAI from "@/components/admin/AdminAI";
 import SourceAnalyzer from "@/components/admin/SourceAnalyzer";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar } from "lucide-react";
+import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
+import CurrencyManager from "@/components/admin/CurrencyManager";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai">("analytics");
+  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate("/admin-dashboard-ERAM-SECURE/login");
@@ -26,11 +28,13 @@ const AdminDashboard = () => {
   const tabs = [
     { id: "analytics" as const, label: "إحصائيات", icon: BarChart3 },
     { id: "news" as const, label: "الأخبار", icon: Newspaper },
+    { id: "editor" as const, label: "مقال جديد", icon: PenSquare },
+    { id: "breaking" as const, label: "عاجل", icon: Zap },
+    { id: "currency" as const, label: "عملات", icon: DollarSign },
     { id: "sources" as const, label: "المصادر", icon: Rss },
     { id: "fetch" as const, label: "الجلب", icon: Database },
     { id: "detector" as const, label: "كاشف", icon: Search },
     { id: "analyzer" as const, label: "محلل", icon: Radar },
-    { id: "editor" as const, label: "مقال", icon: PenSquare },
     { id: "ai" as const, label: "AI", icon: Sparkles },
   ];
 
@@ -55,11 +59,13 @@ const AdminDashboard = () => {
       <div className="p-4">
         {tab === "analytics" && <AnalyticsDashboard />}
         {tab === "news" && <NewsManager />}
+        {tab === "editor" && <ArticleEditor />}
+        {tab === "breaking" && <BreakingNewsManager />}
+        {tab === "currency" && <CurrencyManager />}
         {tab === "sources" && <SourceManager />}
         {tab === "fetch" && <FetchControl />}
         {tab === "detector" && <RssDetector onAddSource={() => setTab("sources")} />}
         {tab === "analyzer" && <SourceAnalyzer />}
-        {tab === "editor" && <ArticleEditor />}
         {tab === "ai" && <AdminAI />}
       </div>
     </div>
