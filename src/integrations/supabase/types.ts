@@ -14,10 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
+      article_history: {
+        Row: {
+          action_type: string
+          article_id: string
+          id: string
+          modified_at: string
+          modified_by: string
+          old_content: string | null
+          old_seo_keywords: string | null
+          old_title: string | null
+        }
+        Insert: {
+          action_type: string
+          article_id: string
+          id?: string
+          modified_at?: string
+          modified_by?: string
+          old_content?: string | null
+          old_seo_keywords?: string | null
+          old_title?: string | null
+        }
+        Update: {
+          action_type?: string
+          article_id?: string
+          id?: string
+          modified_at?: string
+          modified_by?: string
+          old_content?: string | null
+          old_seo_keywords?: string | null
+          old_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_history_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author_image_url: string | null
           author_name: string | null
+          breaking_duration: number | null
           category: string
           content: string | null
           created_at: string
@@ -25,9 +67,11 @@ export type Database = {
           hash: string
           id: string
           image_url: string | null
+          is_breaking: boolean
           is_manual: boolean
           language: string
           published_at: string | null
+          seo_keywords: string | null
           source_id: string | null
           title: string
           url: string
@@ -36,6 +80,7 @@ export type Database = {
         Insert: {
           author_image_url?: string | null
           author_name?: string | null
+          breaking_duration?: number | null
           category?: string
           content?: string | null
           created_at?: string
@@ -43,9 +88,11 @@ export type Database = {
           hash: string
           id?: string
           image_url?: string | null
+          is_breaking?: boolean
           is_manual?: boolean
           language: string
           published_at?: string | null
+          seo_keywords?: string | null
           source_id?: string | null
           title: string
           url: string
@@ -54,6 +101,7 @@ export type Database = {
         Update: {
           author_image_url?: string | null
           author_name?: string | null
+          breaking_duration?: number | null
           category?: string
           content?: string | null
           created_at?: string
@@ -61,9 +109,11 @@ export type Database = {
           hash?: string
           id?: string
           image_url?: string | null
+          is_breaking?: boolean
           is_manual?: boolean
           language?: string
           published_at?: string | null
+          seo_keywords?: string | null
           source_id?: string | null
           title?: string
           url?: string
@@ -78,6 +128,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      breaking_news_settings: {
+        Row: {
+          auto_refresh: boolean
+          created_at: string
+          id: string
+          is_active: boolean
+          scroll_direction: string
+          scroll_speed: number
+          separator_style: string
+          updated_at: string
+        }
+        Insert: {
+          auto_refresh?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          scroll_direction?: string
+          scroll_speed?: number
+          separator_style?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_refresh?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          scroll_direction?: string
+          scroll_speed?: number
+          separator_style?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      currencies: {
+        Row: {
+          change_percent: number | null
+          code: string
+          id: string
+          is_active: boolean
+          name: string
+          price: number | null
+          updated_at: string
+        }
+        Insert: {
+          change_percent?: number | null
+          code: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          change_percent?: number | null
+          code?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      currency_ticker_settings: {
+        Row: {
+          auto_refresh: boolean
+          created_at: string
+          id: string
+          scroll_direction: string
+          scroll_speed: number
+          updated_at: string
+        }
+        Insert: {
+          auto_refresh?: boolean
+          created_at?: string
+          id?: string
+          scroll_direction?: string
+          scroll_speed?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_refresh?: boolean
+          created_at?: string
+          id?: string
+          scroll_direction?: string
+          scroll_speed?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       fetch_settings: {
         Row: {
