@@ -11,7 +11,8 @@ import AdminAI from "@/components/admin/AdminAI";
 import SourceAnalyzer from "@/components/admin/SourceAnalyzer";
 import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
 import CurrencyManager from "@/components/admin/CurrencyManager";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign } from "lucide-react";
+import SourceDebugger from "@/components/admin/SourceDebugger";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
