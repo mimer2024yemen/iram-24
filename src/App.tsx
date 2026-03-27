@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NewsFeed from "./components/NewsFeed";
 import ArticlePage from "./pages/ArticlePage";
+import CategoriesPage from "./pages/CategoriesPage";
 import Favorites from "./pages/Favorites";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
@@ -33,6 +34,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<NewsFeed />} />
           <Route path="/article/:id" element={<ArticlePage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin-dashboard-ERAM-SECURE/login" element={<AdminLogin />} />

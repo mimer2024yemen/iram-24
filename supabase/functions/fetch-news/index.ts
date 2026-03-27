@@ -256,13 +256,30 @@ serve(async (req) => {
           const hash = hashString(item.title + item.link);
           const category = categorize(item.title, item.description, source.language);
 
+          // Try to fetch og:image if no image found
+          let finalImage = item.imageUrl;
+          if (!finalImage && item.link) {
+            try {
+              const pageRes = await fetch(item.link, {
+                headers: { "User-Agent": "EramNews/2.0" },
+                signal: AbortSignal.timeout(8000),
+              });
+              if (pageRes.ok) {
+                const html = await pageRes.text();
+                const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+                  || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+                if (ogMatch) finalImage = ogMatch[1];
+              }
+            } catch { /* skip */ }
+          }
+
           const { error } = await supabase.from("articles").upsert({
             source_id: source.id,
             title: item.title,
             description: item.description || null,
             content: item.content || null,
             url: item.link,
-            image_url: item.imageUrl,
+            image_url: finalImage,
             category,
             language: source.language,
             published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
