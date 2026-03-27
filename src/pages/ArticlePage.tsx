@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
-import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check, ExternalLink } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ const ArticlePage = () => {
   const [favs, setFavs] = useState(getFavorites());
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+  const [sourceName, setSourceName] = useState<string | null>(null);
 
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
@@ -24,10 +26,29 @@ const ArticlePage = () => {
     if (!id) return;
     const fetchArticle = async () => {
       setLoading(true);
+      setRelatedArticles([]);
+      setSourceName(null);
       const { data } = await supabase.from("articles").select("*").eq("id", id).single();
       if (data) {
         setArticle(data as any);
         await supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id);
+
+        // Fetch source name
+        if (data.source_id) {
+          const { data: src } = await supabase.from("news_sources").select("name, website_url, url").eq("id", data.source_id).single();
+          if (src) setSourceName(src.name);
+        }
+
+        // Fetch related articles (same category, different id)
+        const { data: related } = await supabase
+          .from("articles")
+          .select("*")
+          .eq("category", data.category)
+          .eq("language", data.language)
+          .neq("id", id)
+          .order("published_at", { ascending: false })
+          .limit(5);
+        if (related) setRelatedArticles(related as any);
       }
       setLoading(false);
     };
@@ -65,13 +86,10 @@ const ArticlePage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Clean content: remove external links, ads, decode entities
   const cleanContent = (raw: string | null): string => {
     if (!raw) return "";
     let text = decodeHtmlEntities(raw);
-    // Remove URLs
     text = text.replace(/https?:\/\/[^\s]+/g, "");
-    // Remove "Read more", "اقرأ أيضا" patterns
     text = text.replace(/(read more|اقرأ أيضا|المزيد|اقرأ المزيد|إقرأ أيضاً).*/gi, "");
     return text.trim();
   };
@@ -99,12 +117,7 @@ const ArticlePage = () => {
 
       {article.image_url && !imgError && (
         <div className="w-full bg-secondary">
-          <img
-            src={article.image_url}
-            alt={title}
-            className="w-full max-h-[400px] object-contain"
-            onError={() => setImgError(true)}
-          />
+          <img src={article.image_url} alt={title} className="w-full max-h-[400px] object-contain" onError={() => setImgError(true)} />
         </div>
       )}
 
@@ -117,19 +130,36 @@ const ArticlePage = () => {
 
         <h1 className="text-foreground text-xl font-bold leading-tight">{title}</h1>
 
-        {article.author_name && (
-          <div className="flex items-center gap-2">
+        {(article.author_name || sourceName) && (
+          <div className="flex items-center gap-2 flex-wrap">
             {article.author_image_url && (
-              <img src={article.author_image_url} alt={article.author_name} className="w-8 h-8 rounded-full object-cover" />
+              <img src={article.author_image_url} alt={article.author_name || ""} className="w-8 h-8 rounded-full object-cover" />
             )}
-            <span className="text-muted-foreground text-sm">{article.author_name}</span>
+            {article.author_name && <span className="text-muted-foreground text-sm">{article.author_name}</span>}
+            {sourceName && (
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                {sourceName}
+              </span>
+            )}
           </div>
         )}
 
-        <div className="text-foreground text-sm leading-[1.8] whitespace-pre-wrap">
-          {displayContent}
-        </div>
+        <div className="text-foreground text-sm leading-[1.8] whitespace-pre-wrap">{displayContent}</div>
 
+        {/* Original source link */}
+        {article.url && (
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-primary text-sm font-medium hover:underline py-2"
+          >
+            <ExternalLink size={16} />
+            {isRTL ? "المصدر الأصلي" : "Original Source"}
+          </a>
+        )}
+
+        {/* Share section */}
         <div className="border-t border-border pt-4 space-y-3">
           <p className="text-foreground text-sm font-bold">{isRTL ? "مشاركة الخبر" : "Share"}</p>
           <div className="flex flex-wrap gap-2">
@@ -146,6 +176,40 @@ const ArticlePage = () => {
             </button>
           </div>
         </div>
+
+        {/* Related news */}
+        {relatedArticles.length > 0 && (
+          <div className="border-t border-border pt-4 space-y-3">
+            <p className="text-foreground text-sm font-bold">{isRTL ? "أخبار ذات صلة" : "Related News"}</p>
+            <div className="space-y-3">
+              {relatedArticles.map((ra) => {
+                const raTitle = decodeHtmlEntities(ra.title);
+                const raHasImage = !!(ra.image_url && ra.image_url.trim() !== "");
+                return (
+                  <div
+                    key={ra.id}
+                    onClick={() => navigate(`/article/${ra.id}`)}
+                    className="flex gap-3 cursor-pointer border-b border-border pb-3 last:border-0"
+                    dir={isRTL ? "rtl" : "ltr"}
+                  >
+                    {raHasImage && (
+                      <img
+                        src={ra.image_url!}
+                        alt={raTitle}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-secondary"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-foreground text-sm font-medium line-clamp-2">{raTitle}</h4>
+                      <span className="text-muted-foreground text-xs">{timeAgo(ra.published_at, lang)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <BottomNav />
