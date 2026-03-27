@@ -69,6 +69,7 @@ const AdminDashboard = () => {
         {tab === "detector" && <RssDetector onAddSource={() => setTab("sources")} />}
         {tab === "analyzer" && <SourceAnalyzer />}
         {tab === "ai" && <AdminAI />}
+        {tab === "debugger" && <SourceDebugger />}
       </div>
     </div>
   );
