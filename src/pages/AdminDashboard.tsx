@@ -37,6 +37,7 @@ const AdminDashboard = () => {
     { id: "detector" as const, label: "كاشف", icon: Search },
     { id: "analyzer" as const, label: "محلل", icon: Radar },
     { id: "ai" as const, label: "AI", icon: Sparkles },
+    { id: "debugger" as const, label: "مصحح", icon: Bug },
   ];
 
   return (
