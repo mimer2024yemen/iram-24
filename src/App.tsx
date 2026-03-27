@@ -34,6 +34,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<NewsFeed />} />
           <Route path="/article/:id" element={<ArticlePage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin-dashboard-ERAM-SECURE/login" element={<AdminLogin />} />
