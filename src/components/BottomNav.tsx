@@ -8,7 +8,7 @@ const BottomNav = () => {
   const tabs = [
     { icon: Settings, label: "الإعدادات", path: "/settings" },
     { icon: Heart, label: "المفضلة", path: "/favorites" },
-    { icon: Grid3X3, label: "الأقسام", path: "/" },
+    { icon: Grid3X3, label: "الأقسام", path: "/categories" },
     { icon: Home, label: "الرئيسية", path: "/" },
   ];
 
