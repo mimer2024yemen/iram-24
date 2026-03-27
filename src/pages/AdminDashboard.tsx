@@ -11,12 +11,13 @@ import AdminAI from "@/components/admin/AdminAI";
 import SourceAnalyzer from "@/components/admin/SourceAnalyzer";
 import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
 import CurrencyManager from "@/components/admin/CurrencyManager";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign } from "lucide-react";
+import SourceDebugger from "@/components/admin/SourceDebugger";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency">("analytics");
+  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate("/admin-dashboard-ERAM-SECURE/login");
@@ -36,6 +37,7 @@ const AdminDashboard = () => {
     { id: "detector" as const, label: "كاشف", icon: Search },
     { id: "analyzer" as const, label: "محلل", icon: Radar },
     { id: "ai" as const, label: "AI", icon: Sparkles },
+    { id: "debugger" as const, label: "مصحح", icon: Bug },
   ];
 
   return (
@@ -67,6 +69,7 @@ const AdminDashboard = () => {
         {tab === "detector" && <RssDetector onAddSource={() => setTab("sources")} />}
         {tab === "analyzer" && <SourceAnalyzer />}
         {tab === "ai" && <AdminAI />}
+        {tab === "debugger" && <SourceDebugger />}
       </div>
     </div>
   );
