@@ -3,6 +3,7 @@ import { Article } from "@/hooks/useArticles";
 import { timeAgo, toggleFavorite, getFavorites, decodeHtmlEntities } from "@/lib/newsUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { proxyImageUrl } from "@/lib/imageProxy";
 
 interface NewsCardProps {
   article: Article;
@@ -31,56 +32,58 @@ const NewsCard = ({ article, language }: NewsCardProps) => {
     }
   };
 
-  const showImage = !!(article.image_url && article.image_url.trim() !== '' && !imgError);
+  const rawImgUrl = article.image_url?.trim() || "";
+  const imgSrc = rawImgUrl ? proxyImageUrl(rawImgUrl) : "";
+  const showImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
   const desc = article.description ? decodeHtmlEntities(article.description) : null;
 
   return (
     <div
-      className="border-b border-border pb-4 cursor-pointer"
+      className="border-b border-border pb-2.5 cursor-pointer"
       dir={language === "AR" ? "rtl" : "ltr"}
       onClick={() => navigate(`/article/${article.id}`)}
     >
-      <div className={`grid ${showImage ? "grid-cols-[1fr_100px]" : "grid-cols-1"} gap-3`}>
-        <div className="flex flex-col justify-between min-h-[80px]">
+      <div className={`grid ${showImage ? "grid-cols-[1fr_72px]" : "grid-cols-1"} gap-2.5`}>
+        <div className="flex flex-col justify-between min-h-[60px]">
           <div>
             {article.author_name && (
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="flex items-center gap-1 mb-0.5">
                 {article.author_image_url && (
-                  <img src={article.author_image_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                  <img src={article.author_image_url} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
                 )}
-                <span className="text-muted-foreground text-[10px]">{article.author_name}</span>
+                <span className="text-muted-foreground text-[9px]">{article.author_name}</span>
               </div>
             )}
-            <h3 className="text-foreground font-bold text-[15px] leading-snug line-clamp-2 mb-1">
+            <h3 className="text-foreground font-bold text-[13px] leading-[1.4] line-clamp-2 mb-0.5">
               {title}
             </h3>
             {desc && (
-              <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
+              <p className="text-muted-foreground text-[11px] leading-relaxed line-clamp-1">
                 {desc}
               </p>
             )}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center justify-between mt-1.5">
+            <div className="flex items-center gap-1.5 text-[10px]">
               <span className="text-primary font-medium">{article.category}</span>
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{timeAgo(article.published_at, language)}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-                <Share2 size={14} />
+                <Share2 size={12} />
               </button>
               <button onClick={handleFav} className="transition-transform active:scale-110">
-                <Heart size={14} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} />
+                <Heart size={12} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} />
               </button>
             </div>
           </div>
         </div>
         {showImage && (
-          <div className="w-[100px] h-[100px] rounded-lg overflow-hidden bg-secondary shrink-0">
+          <div className="w-[72px] h-[72px] rounded-md overflow-hidden bg-secondary shrink-0">
             <img
-              src={article.image_url!}
+              src={imgSrc}
               alt={title}
               className="w-full h-full object-cover"
               loading="lazy"
