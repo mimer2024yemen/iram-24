@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Article } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
+import { proxyImageUrl } from "@/lib/imageProxy";
 
 interface NewsSliderProps {
   language: "AR" | "EN";
@@ -46,7 +47,7 @@ const NewsSlider = ({ language }: NewsSliderProps) => {
     >
       {hasImage && (
         <img
-          src={article.image_url!}
+          src={proxyImageUrl(article.image_url!)}
           alt={decodeHtmlEntities(article.title)}
           className="absolute inset-0 w-full h-full object-cover"
           onError={() => setImgErrors(prev => new Set(prev).add(article.id))}
