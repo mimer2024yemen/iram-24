@@ -10,6 +10,8 @@ import Favorites from "./pages/Favorites";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import RadioPage from "./pages/RadioPage";
+import RadioAdmin from "./pages/RadioAdmin";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
