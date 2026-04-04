@@ -47,7 +47,7 @@ const NewsSlider = ({ language }: NewsSliderProps) => {
     >
       {hasImage && (
         <img
-          src={article.image_url!}
+          src={proxyImageUrl(article.image_url!)}
           alt={decodeHtmlEntities(article.title)}
           className="absolute inset-0 w-full h-full object-cover"
           onError={() => setImgErrors(prev => new Set(prev).add(article.id))}
