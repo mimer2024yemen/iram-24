@@ -1,4 +1,4 @@
-import { Home, Grid3X3, Heart, Settings } from "lucide-react";
+import { Home, Grid3X3, Heart, Settings, Radio } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const BottomNav = () => {
