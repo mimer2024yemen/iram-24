@@ -41,6 +41,8 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin-dashboard-ERAM-SECURE/login" element={<AdminLogin />} />
           <Route path="/admin-dashboard-ERAM-SECURE" element={<AdminDashboard />} />
+          <Route path="/radio" element={<RadioPage />} />
+          <Route path="/radio/admin" element={<RadioAdmin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
