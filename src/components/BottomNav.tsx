@@ -1,4 +1,4 @@
-import { Home, Grid3X3, Heart, Settings } from "lucide-react";
+import { Home, Grid3X3, Heart, Settings, Radio } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const BottomNav = () => {
@@ -7,6 +7,7 @@ const BottomNav = () => {
   
   const tabs = [
     { icon: Settings, label: "الإعدادات", path: "/settings" },
+    { icon: Radio, label: "راديو", path: "/radio" },
     { icon: Heart, label: "المفضلة", path: "/favorites" },
     { icon: Grid3X3, label: "الأقسام", path: "/categories" },
     { icon: Home, label: "الرئيسية", path: "/" },
@@ -16,7 +17,7 @@ const BottomNav = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
       <div className="flex items-center justify-around py-2" dir="rtl">
         {tabs.map(({ icon: Icon, label, path }, i) => {
-          const isActive = i === 3 ? location.pathname === "/" : location.pathname === path && i !== 3;
+          const isActive = path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
           return (
             <button
               key={label}
