@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Article } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
+import { proxyImageUrl } from "@/lib/imageProxy";
 
 interface NewsSliderProps {
   language: "AR" | "EN";
