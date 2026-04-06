@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Article } from "@/hooks/useArticles";
 import { supabase } from "@/integrations/supabase/client";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 
@@ -28,8 +27,7 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
         .eq("is_breaking", true)
         .order("published_at", { ascending: false })
         .limit(10);
-      
-      // Fallback to latest if no breaking articles
+
       if (!data || data.length === 0) {
         const { data: latest } = await supabase
           .from("articles")
@@ -52,7 +50,6 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
     fetchSettings();
 
     const interval = setInterval(fetchBreaking, 30000);
-
     const channel = supabase
       .channel("breaking-settings-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "breaking_news_settings" }, () => fetchSettings())
@@ -62,14 +59,15 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
   }, [language]);
 
   if (!settings?.is_active && settings !== null) return null;
+
   if (headlines.length === 0) {
     return (
-      <div className="bg-primary py-2 overflow-hidden">
-        <div className="flex items-center gap-3 px-4">
-          <span className="bg-background/20 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded shrink-0">
-            {language === "AR" ? "عاجل" : "BREAKING"}
+      <div className="bg-primary overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2">
+          <span className="bg-background/20 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded shrink-0">
+            {language === "AR" ? "⚡ عاجل" : "⚡ BREAKING"}
           </span>
-          <span className="text-primary-foreground text-sm">
+          <span className="text-primary-foreground text-xs">
             {language === "AR" ? "جاري تحميل الأخبار..." : "Loading news..."}
           </span>
         </div>
@@ -82,18 +80,18 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
   const speed = settings?.scroll_speed || 5;
   const direction = settings?.scroll_direction || "rtl";
   const isRTL = direction === "rtl";
-
   const animationClass = direction === "ltr" ? "animate-ticker-ltr" : "animate-ticker-rtl";
 
   return (
-    <div className="bg-primary py-2 overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
-      <div className="flex items-center gap-3 px-4">
-        <span className="bg-background/20 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded shrink-0">
-          {language === "AR" ? "⚡ عاجل" : "⚡ BREAKING"}
+    <div className="bg-primary overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+      <div className="flex items-center gap-3 px-3 py-1.5">
+        <span className="bg-background/20 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+          <span className="animate-pulse-live">⚡</span>
+          {language === "AR" ? "عاجل" : "BREAKING"}
         </span>
-        <div className="overflow-hidden flex-1">
+        <div className="overflow-hidden flex-1 min-w-0">
           <div className={`whitespace-nowrap ${animationClass}`} style={{ animationDuration: `${speed * 3}s` }}>
-            <span className="text-primary-foreground text-sm">{text}</span>
+            <span className="text-primary-foreground text-xs">{text}</span>
           </div>
         </div>
       </div>

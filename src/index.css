@@ -80,12 +80,22 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+  html {
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;
     font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
