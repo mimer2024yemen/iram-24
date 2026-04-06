@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useArticles } from "@/hooks/useArticles";
 import { AR_CATEGORIES, EN_CATEGORIES } from "@/lib/newsUtils";
 import BreakingNewsBar from "@/components/BreakingNewsBar";
@@ -12,24 +12,31 @@ import SearchOverlay from "@/components/SearchOverlay";
 import ManualArticlesSection from "@/components/ManualArticlesSection";
 import Sidebar from "@/components/Sidebar";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 30;
 
 const NewsFeed = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [language, setLanguage] = useState<"AR" | "EN">(() => {
     return (localStorage.getItem("eram_lang") as "AR" | "EN") || "AR";
   });
   const categories = language === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
   const [activeCategory, setActiveCategory] = useState(categories[0]);
-  const [page, setPage] = useState(1);
+
+  // Read page from URL
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const setPage = (p: number) => {
+    setSearchParams({ page: String(p) }, { replace: false });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const [showSearch, setShowSearch] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
 
-  // Fetch more than needed to know total
   const fetchLimit = PAGE_SIZE + 1;
   const { articles, loading } = useArticles(language, activeCategory, page * fetchLimit);
 
-  // Paginate locally
   const startIdx = (page - 1) * PAGE_SIZE;
   const pageArticles = articles.slice(startIdx, startIdx + PAGE_SIZE);
   const hasMore = articles.length > startIdx + PAGE_SIZE;
@@ -40,28 +47,105 @@ const NewsFeed = () => {
     localStorage.setItem("eram_lang", lang);
     const cats = lang === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
     setActiveCategory(cats[0]);
-    setPage(1);
+    setSearchParams({ page: "1" }, { replace: true });
   };
 
   const handleCategorySelect = (cat: string) => {
     setActiveCategory(cat);
-    setPage(1);
+    setSearchParams({ page: "1" }, { replace: true });
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goToPage = (p: number) => {
-    setPage(p);
-    scrollToTop();
-  };
-
-  // Split articles: first = featured, rest = grid
   const featuredArticle = pageArticles[0];
   const gridArticles = pageArticles.slice(1);
-
   const isRTL = language === "AR";
+
+  // Skeleton loader
+  const Skeleton = () => (
+    <div className="space-y-4">
+      <div className="animate-pulse rounded-xl bg-card overflow-hidden">
+        <div className="aspect-[16/9] bg-secondary" />
+        <div className="p-4 space-y-2">
+          <div className="h-4 bg-secondary rounded w-1/4" />
+          <div className="h-5 bg-secondary rounded w-3/4" />
+          <div className="h-3 bg-secondary rounded w-1/2" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="animate-pulse rounded-xl bg-card overflow-hidden">
+            <div className="aspect-[16/10] bg-secondary" />
+            <div className="p-3 space-y-2">
+              <div className="h-3 bg-secondary rounded w-1/3" />
+              <div className="h-4 bg-secondary rounded w-full" />
+              <div className="h-3 bg-secondary rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Pagination component
+  const totalPages = Math.max(Math.ceil(totalEstimated / PAGE_SIZE), page + (hasMore ? 1 : 0));
+  const renderPagination = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push("...");
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+      if (page < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return (
+      <div className="mt-8 mb-4">
+        <p className="text-center text-muted-foreground text-xs mb-3">
+          {isRTL
+            ? `عرض ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} من ${totalEstimated}+ نتيجة`
+            : `Showing ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} of ${totalEstimated}+ results`}
+        </p>
+        <div className="flex items-center justify-center gap-1.5" dir="ltr">
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
+          >
+            <ChevronLeft size={16} />
+            <span className="hidden sm:inline">{isRTL ? "السابق" : "Previous"}</span>
+          </button>
+
+          {pages.map((p, i) =>
+            p === "..." ? (
+              <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-muted-foreground text-sm">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  page === p
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-card text-foreground hover:bg-accent border border-border"
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={!hasMore}
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
+          >
+            <span className="hidden sm:inline">{isRTL ? "التالي" : "Next"}</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background pb-16 overflow-x-hidden" dir={isRTL ? "rtl" : "ltr"}>
@@ -83,48 +167,22 @@ const NewsFeed = () => {
         language={language}
       />
 
-      <main className="max-w-screen-xl mx-auto px-3 md:px-6 py-4">
+      <main className="max-w-screen-xl mx-auto px-3 md:px-6 py-4" style={{ minHeight: "60vh" }}>
         {loading ? (
-          <div className="space-y-4">
-            {/* Featured skeleton */}
-            <div className="animate-pulse rounded-xl bg-card overflow-hidden">
-              <div className="aspect-[16/9] bg-secondary" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-secondary rounded w-1/4" />
-                <div className="h-5 bg-secondary rounded w-3/4" />
-                <div className="h-3 bg-secondary rounded w-1/2" />
-              </div>
-            </div>
-            {/* Grid skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="animate-pulse rounded-xl bg-card overflow-hidden">
-                  <div className="aspect-[16/10] bg-secondary" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-3 bg-secondary rounded w-1/3" />
-                    <div className="h-4 bg-secondary rounded w-full" />
-                    <div className="h-3 bg-secondary rounded w-2/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Skeleton />
         ) : pageArticles.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-sm">
-              {language === "AR" ? "لا توجد أخبار في هذا القسم حالياً" : "No news in this section yet"}
+              {isRTL ? "لا توجد أخبار في هذا القسم حالياً" : "No news in this section yet"}
             </p>
           </div>
         ) : (
           <>
-            {/* Featured article */}
             {featuredArticle && page === 1 && (
               <div className="mb-4">
                 <NewsCard article={featuredArticle} language={language} variant="featured" />
               </div>
             )}
-
-            {/* Grid of medium cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(page === 1 ? gridArticles : pageArticles).map((article) => (
                 <NewsCard key={article.id} article={article} language={language} variant="medium" />
@@ -133,65 +191,7 @@ const NewsFeed = () => {
           </>
         )}
 
-        {/* Pagination */}
-        {!loading && pageArticles.length > 0 && (
-          <div className="mt-8 mb-4">
-            {/* Results count */}
-            <p className="text-center text-muted-foreground text-xs mb-3">
-              {language === "AR"
-                ? `عرض ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} من ${totalEstimated}+ نتيجة`
-                : `Showing ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} of ${totalEstimated}+ results`}
-            </p>
-            <div className="flex items-center justify-center gap-1.5" dir="ltr">
-              {/* Previous */}
-              <button
-                onClick={() => goToPage(page - 1)}
-                disabled={page === 1}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
-              >
-                <ChevronLeft size={16} />
-                <span className="hidden sm:inline">{language === "AR" ? "السابق" : "Previous"}</span>
-              </button>
-
-              {/* Page numbers */}
-              {Array.from({ length: Math.min(5, Math.ceil(totalEstimated / PAGE_SIZE) || 1) }, (_, i) => {
-                const totalPages = Math.max(Math.ceil(totalEstimated / PAGE_SIZE), page + (hasMore ? 1 : 0));
-                let pageNum: number;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (page <= 3) {
-                  pageNum = i + 1;
-                } else {
-                  pageNum = page - 2 + i;
-                }
-                if (pageNum < 1 || pageNum > totalPages) return null;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => goToPage(pageNum)}
-                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                      page === pageNum
-                        ? "bg-primary text-primary-foreground shadow-md"
-                        : "bg-card text-foreground hover:bg-accent border border-border"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-
-              {/* Next */}
-              <button
-                onClick={() => goToPage(page + 1)}
-                disabled={!hasMore}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
-              >
-                <span className="hidden sm:inline">{language === "AR" ? "التالي" : "Next"}</span>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        {!loading && pageArticles.length > 0 && renderPagination()}
       </main>
 
       <ManualArticlesSection language={language} />

@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { RadioStation } from "@/data/defaultStations";
 import { getStations, getFavorites, toggleFavorite, getLastPlayed } from "@/lib/radioStorage";
 import { useRadioPlayer, PlayerStatus } from "@/hooks/useRadioPlayer";
 import BottomNav from "@/components/BottomNav";
-import { Search, Heart, Radio, Loader2, Pause, Play, AlertCircle, X } from "lucide-react";
+import { Search, Heart, Radio, Loader2, Pause, Play, AlertCircle, X, Volume2, VolumeX } from "lucide-react";
 
 const RadioPage = () => {
   const [stations, setStations] = useState<RadioStation[]>([]);
@@ -11,7 +11,24 @@ const RadioPage = () => {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "favorites">("all");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem("radio_volume");
+    return saved ? parseFloat(saved) : 0.8;
+  });
+  const [muted, setMuted] = useState(false);
   const { currentId, status, errorMsg, play, stop } = useRadioPlayer();
+
+  // Sync volume to audio element
+  useEffect(() => {
+    const audio = document.querySelector("audio") as HTMLAudioElement | null;
+    if (audio) {
+      audio.volume = muted ? 0 : volume;
+    }
+  }, [volume, muted, currentId, status]);
+
+  useEffect(() => {
+    localStorage.setItem("radio_volume", String(volume));
+  }, [volume]);
 
   const loadData = useCallback(() => {
     const all = getStations().filter((s) => s.enabled);
@@ -24,17 +41,6 @@ const RadioPage = () => {
     window.addEventListener("radio-stations-updated", loadData);
     return () => window.removeEventListener("radio-stations-updated", loadData);
   }, [loadData]);
-
-  // Auto-resume last played
-  useEffect(() => {
-    const lastId = getLastPlayed();
-    if (lastId && stations.length > 0) {
-      const s = stations.find((st) => st.id === lastId);
-      if (s && s.enabled) {
-        // Don't auto-play, just highlight
-      }
-    }
-  }, [stations]);
 
   const countries = useMemo(() => {
     const set = new Set(stations.map((s) => s.country));
@@ -53,7 +59,6 @@ const RadioPage = () => {
           s.city.toLowerCase().includes(q)
       );
     }
-    // Favorites first
     return list.sort((a, b) => {
       const af = favorites.has(a.id) ? 0 : 1;
       const bf = favorites.has(b.id) ? 0 : 1;
@@ -73,6 +78,8 @@ const RadioPage = () => {
     if (status === "error") return <AlertCircle size={18} className="text-destructive" />;
     return <Play size={18} className="text-primary" />;
   };
+
+  const currentStation = stations.find((s) => s.id === currentId);
 
   return (
     <div className="min-h-screen bg-background pb-20" dir="rtl">
@@ -135,20 +142,42 @@ const RadioPage = () => {
         </div>
       </header>
 
-      {/* Now playing bar */}
-      {currentId && status === "playing" && (
-        <div className="sticky top-[180px] z-30 mx-3 mt-2 bg-primary/10 border border-primary/20 rounded-xl px-4 py-2 flex items-center gap-3">
-          <div className="flex gap-0.5 items-end">
-            {[1, 2, 3].map((i) => (
-              <span key={i} className="w-1 bg-primary rounded-full animate-pulse" style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.15}s` }} />
-            ))}
+      {/* Now playing bar with volume */}
+      {currentId && currentStation && (
+        <div className="sticky top-[200px] z-30 mx-3 mt-2 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-0.5 items-end">
+              {status === "playing" && [1, 2, 3].map((i) => (
+                <span key={i} className="w-1 bg-primary rounded-full animate-pulse" style={{ height: `${8 + i * 4}px`, animationDelay: `${i * 0.15}s` }} />
+              ))}
+              {status === "loading" && <Loader2 size={16} className="animate-spin text-primary" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground font-medium truncate">{currentStation.name}</p>
+              <p className="text-[10px] text-muted-foreground">{currentStation.city} · {currentStation.country}</p>
+            </div>
+            <button onClick={stop}>
+              <X size={16} className="text-muted-foreground" />
+            </button>
           </div>
-          <span className="text-xs text-foreground font-medium truncate">
-            {stations.find((s) => s.id === currentId)?.name}
-          </span>
-          <button onClick={stop} className="mr-auto">
-            <X size={16} className="text-muted-foreground" />
-          </button>
+          {/* Volume control */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setMuted(!muted)} className="text-muted-foreground">
+              {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={muted ? 0 : volume}
+              onChange={(e) => {
+                setVolume(parseFloat(e.target.value));
+                setMuted(false);
+              }}
+              className="flex-1 h-1.5 bg-secondary rounded-full accent-primary cursor-pointer"
+            />
+          </div>
         </div>
       )}
 
@@ -170,7 +199,6 @@ const RadioPage = () => {
                   : "bg-card border-border hover:bg-secondary/50"
               }`}
             >
-              {/* Play button */}
               <button
                 onClick={() => play(station.id, station.stream_url)}
                 className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
@@ -180,7 +208,6 @@ const RadioPage = () => {
                 {statusIcon(station.id)}
               </button>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold truncate ${isActive ? "text-primary" : "text-foreground"}`}>
                   {station.name}
@@ -193,7 +220,6 @@ const RadioPage = () => {
                 )}
               </div>
 
-              {/* Favorite */}
               <button
                 onClick={() => handleFav(station.id)}
                 className="flex-shrink-0 p-1.5 transition-transform active:scale-125"

@@ -12,12 +12,13 @@ import SourceAnalyzer from "@/components/admin/SourceAnalyzer";
 import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
 import CurrencyManager from "@/components/admin/CurrencyManager";
 import SourceDebugger from "@/components/admin/SourceDebugger";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug } from "lucide-react";
+import RadioAdminPanel from "@/components/admin/RadioAdminPanel";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug, Radio } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger">("analytics");
+  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger" | "radio">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate("/admin-dashboard-ERAM-SECURE/login");
@@ -32,6 +33,7 @@ const AdminDashboard = () => {
     { id: "editor" as const, label: "مقال جديد", icon: PenSquare },
     { id: "breaking" as const, label: "عاجل", icon: Zap },
     { id: "currency" as const, label: "عملات", icon: DollarSign },
+    { id: "radio" as const, label: "راديو", icon: Radio },
     { id: "sources" as const, label: "المصادر", icon: Rss },
     { id: "fetch" as const, label: "الجلب", icon: Database },
     { id: "detector" as const, label: "كاشف", icon: Search },
@@ -64,6 +66,7 @@ const AdminDashboard = () => {
         {tab === "editor" && <ArticleEditor />}
         {tab === "breaking" && <BreakingNewsManager />}
         {tab === "currency" && <CurrencyManager />}
+        {tab === "radio" && <RadioAdminPanel />}
         {tab === "sources" && <SourceManager />}
         {tab === "fetch" && <FetchControl />}
         {tab === "detector" && <RssDetector onAddSource={() => setTab("sources")} />}
