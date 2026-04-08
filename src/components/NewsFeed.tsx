@@ -12,7 +12,7 @@ import SearchOverlay from "@/components/SearchOverlay";
 import ManualArticlesSection from "@/components/ManualArticlesSection";
 import Sidebar from "@/components/Sidebar";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 30;
 
