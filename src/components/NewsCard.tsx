@@ -12,11 +12,16 @@ interface NewsCardProps {
   onBeforeNavigate?: () => void;
 }
 
-const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => {
+const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: NewsCardProps) => {
   const [favs, setFavs] = useState(getFavorites());
   const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
   const isFav = favs.includes(article.id);
+
+  const goToArticle = () => {
+    onBeforeNavigate?.();
+    navigate(`/article/${article.id}`);
+  };
 
   const handleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
