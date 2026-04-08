@@ -96,7 +96,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     return (
       <div
         className="rounded-xl overflow-hidden cursor-pointer group bg-card shadow-md hover:shadow-lg transition-shadow flex flex-col h-full"
-        onClick={() => navigate(`/article/${article.id}`)}
+        onClick={goToArticle}
         dir={language === "AR" ? "rtl" : "ltr"}
       >
         {showImage ? (
