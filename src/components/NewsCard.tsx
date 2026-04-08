@@ -9,6 +9,7 @@ interface NewsCardProps {
   article: Article;
   language: "AR" | "EN";
   variant?: "featured" | "medium" | "compact";
+  onBeforeNavigate?: () => void;
 }
 
 const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => {
