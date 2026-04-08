@@ -9,13 +9,19 @@ interface NewsCardProps {
   article: Article;
   language: "AR" | "EN";
   variant?: "featured" | "medium" | "compact";
+  onBeforeNavigate?: () => void;
 }
 
-const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => {
+const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: NewsCardProps) => {
   const [favs, setFavs] = useState(getFavorites());
   const [imgError, setImgError] = useState(false);
   const navigate = useNavigate();
   const isFav = favs.includes(article.id);
+
+  const goToArticle = () => {
+    onBeforeNavigate?.();
+    navigate(`/article/${article.id}`);
+  };
 
   const handleFav = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -44,7 +50,7 @@ const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => 
     return (
       <div
         className="relative rounded-xl overflow-hidden cursor-pointer group bg-card shadow-lg"
-        onClick={() => navigate(`/article/${article.id}`)}
+        onClick={goToArticle}
         dir={language === "AR" ? "rtl" : "ltr"}
       >
         {showImage ? (
@@ -90,7 +96,7 @@ const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => 
     return (
       <div
         className="rounded-xl overflow-hidden cursor-pointer group bg-card shadow-md hover:shadow-lg transition-shadow flex flex-col h-full"
-        onClick={() => navigate(`/article/${article.id}`)}
+        onClick={goToArticle}
         dir={language === "AR" ? "rtl" : "ltr"}
       >
         {showImage ? (
@@ -140,7 +146,7 @@ const NewsCard = ({ article, language, variant = "compact" }: NewsCardProps) => 
     <div
       className="flex gap-3 cursor-pointer group py-3 border-b border-border last:border-b-0"
       dir={language === "AR" ? "rtl" : "ltr"}
-      onClick={() => navigate(`/article/${article.id}`)}
+      onClick={goToArticle}
     >
       {showImage && (
         <div className="w-24 h-20 md:w-28 md:h-[76px] rounded-lg overflow-hidden bg-secondary shrink-0">
