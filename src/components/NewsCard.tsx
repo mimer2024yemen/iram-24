@@ -50,7 +50,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     return (
       <div
         className="relative rounded-xl overflow-hidden cursor-pointer group bg-card shadow-lg"
-        onClick={() => navigate(`/article/${article.id}`)}
+        onClick={goToArticle}
         dir={language === "AR" ? "rtl" : "ltr"}
       >
         {showImage ? (
