@@ -194,12 +194,12 @@ const NewsFeed = () => {
           <>
             {featuredArticle && page === 1 && (
               <div className="mb-4">
-                <NewsCard article={featuredArticle} language={language} variant="featured" />
+                <NewsCard article={featuredArticle} language={language} variant="featured" onBeforeNavigate={saveScrollPos} />
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(page === 1 ? gridArticles : pageArticles).map((article) => (
-                <NewsCard key={article.id} article={article} language={language} variant="medium" />
+                <NewsCard key={article.id} article={article} language={language} variant="medium" onBeforeNavigate={saveScrollPos} />
               ))}
             </div>
           </>
