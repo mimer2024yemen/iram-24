@@ -146,7 +146,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     <div
       className="flex gap-3 cursor-pointer group py-3 border-b border-border last:border-b-0"
       dir={language === "AR" ? "rtl" : "ltr"}
-      onClick={() => navigate(`/article/${article.id}`)}
+      onClick={goToArticle}
     >
       {showImage && (
         <div className="w-24 h-20 md:w-28 md:h-[76px] rounded-lg overflow-hidden bg-secondary shrink-0">
