@@ -18,6 +18,20 @@ const PAGE_SIZE = 30;
 
 const NewsFeed = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Restore scroll position when returning via back button
+  useEffect(() => {
+    const savedPos = sessionStorage.getItem("eram_feed_scroll");
+    if (savedPos) {
+      setTimeout(() => window.scrollTo(0, parseInt(savedPos)), 50);
+      sessionStorage.removeItem("eram_feed_scroll");
+    }
+  }, []);
+
+  const saveScrollPos = () => {
+    sessionStorage.setItem("eram_feed_scroll", String(window.scrollY));
+  };
+
   const [language, setLanguage] = useState<"AR" | "EN">(() => {
     return (localStorage.getItem("eram_lang") as "AR" | "EN") || "AR";
   });
