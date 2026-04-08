@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Loader2, Upload, X, Wand2, RefreshCw, PenLine,
-  FileText, Hash, Eraser, Save, ArrowRight, Image as ImageIcon
+  FileText, Hash, Eraser, Save, ArrowRight, Image as ImageIcon,
+  ExternalLink, Eye, EyeOff, Download
 } from "lucide-react";
 
 interface ArticleEditPageProps {
@@ -22,8 +23,11 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
   const [seoKeywords, setSeoKeywords] = useState("");
   const [isBreaking, setIsBreaking] = useState(false);
   const [breakingDuration, setBreakingDuration] = useState(60);
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [showSource, setShowSource] = useState(true);
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [fetchingContent, setFetchingContent] = useState(false);
   const [newImage, setNewImage] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const imageRef = useRef<HTMLInputElement>(null);
@@ -39,6 +43,7 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         setAuthorName(data.author_name || "");
         setCategory(data.category);
         setLanguage(data.language);
+        setSourceUrl(data.url || "");
         setSeoKeywords((data as any).seo_keywords || "");
         setIsBreaking((data as any).is_breaking || false);
         setBreakingDuration((data as any).breaking_duration || 60);
@@ -90,6 +95,31 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
       toast.error(e.message || "خطأ في الذكاء الاصطناعي");
     }
     setAiLoading(null);
+  };
+
+  // Fetch original content from source URL
+  const fetchOriginalContent = async () => {
+    if (!sourceUrl || sourceUrl.startsWith("#")) {
+      toast.error("لا يوجد رابط مصدر صالح");
+      return;
+    }
+    setFetchingContent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-article-content", {
+        body: { url: sourceUrl }
+      });
+      if (error) throw error;
+      if (data?.content) {
+        setContent(data.content);
+        if (data.description) setDescription(data.description);
+        toast.success("تم جلب المحتوى من المصدر");
+      } else {
+        toast.error("لم يتم العثور على محتوى");
+      }
+    } catch (e: any) {
+      toast.error("فشل جلب المحتوى من المصدر");
+    }
+    setFetchingContent(false);
   };
 
   const handleImageSelect = (file: File) => {
@@ -165,6 +195,43 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
           </div>
         </div>
 
+        {/* Fetch Content from Source */}
+        {sourceUrl && !sourceUrl.startsWith("#") && (
+          <div className="bg-card rounded-lg p-3 border border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-foreground text-xs font-bold flex items-center gap-1">
+                <ExternalLink size={12} className="text-primary" /> المصدر الأصلي
+              </p>
+              <button
+                onClick={() => setShowSource(!showSource)}
+                className="text-muted-foreground hover:text-foreground p-1"
+                title={showSource ? "إخفاء الرابط" : "إظهار الرابط"}
+              >
+                {showSource ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            {showSource && (
+              <input
+                value={sourceUrl}
+                readOnly
+                dir="ltr"
+                className="w-full px-3 py-1.5 rounded-lg bg-input text-foreground border border-border text-xs font-mono"
+              />
+            )}
+            <button
+              onClick={fetchOriginalContent}
+              disabled={fetchingContent}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+            >
+              {fetchingContent ? (
+                <><Loader2 size={12} className="animate-spin" /> جاري الجلب...</>
+              ) : (
+                <><Download size={12} /> جلب المحتوى من المصدر</>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Title */}
         <div>
           <label className="text-foreground text-sm mb-1 block">العنوان</label>
@@ -227,6 +294,13 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
           <input value={seoKeywords} onChange={(e) => setSeoKeywords(e.target.value)}
             placeholder="كلمة1, كلمة2, كلمة3"
             className="w-full px-3 py-2 rounded-lg bg-input text-foreground border border-border text-sm" />
+          {seoKeywords && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {seoKeywords.split(",").map((k, i) => k.trim() && (
+                <span key={i} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">#{k.trim()}</span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Breaking News Toggle */}

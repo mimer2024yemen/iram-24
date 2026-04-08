@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
-import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check, ExternalLink } from "lucide-react";
+import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check, ExternalLink, Eye } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
@@ -22,6 +22,15 @@ const ArticlePage = () => {
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
 
+  // Save scroll position before navigating away
+  useEffect(() => {
+    const saveScroll = () => {
+      sessionStorage.setItem("eram_scroll_pos", String(window.scrollY));
+    };
+    window.addEventListener("beforeunload", saveScroll);
+    return () => window.removeEventListener("beforeunload", saveScroll);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     const fetchArticle = async () => {
@@ -33,13 +42,11 @@ const ArticlePage = () => {
         setArticle(data as any);
         await supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id);
 
-        // Fetch source name
         if (data.source_id) {
           const { data: src } = await supabase.from("news_sources").select("name, website_url, url").eq("id", data.source_id).single();
           if (src) setSourceName(src.name);
         }
 
-        // Fetch related articles (same category, different id)
         const { data: related } = await supabase
           .from("articles")
           .select("*")
@@ -55,10 +62,39 @@ const ArticlePage = () => {
     fetchArticle();
   }, [id]);
 
+  const handleBack = () => {
+    navigate(-1);
+    // Restore scroll position after navigation
+    setTimeout(() => {
+      const savedPos = sessionStorage.getItem("eram_scroll_pos");
+      if (savedPos) {
+        window.scrollTo({ top: parseInt(savedPos), behavior: "smooth" });
+      }
+    }, 100);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground text-sm">جاري التحميل...</div>
+      <div className="min-h-screen bg-background" dir="rtl">
+        <header className="sticky top-0 z-40 h-12 flex items-center gap-3 px-4 bg-background/95 backdrop-blur border-b border-border">
+          <div className="w-5 h-5 rounded bg-secondary animate-pulse" />
+          <div className="h-4 bg-secondary rounded w-2/3 animate-pulse" />
+        </header>
+        <div className="animate-pulse">
+          <div className="w-full aspect-video bg-secondary" />
+          <div className="p-4 space-y-3">
+            <div className="h-3 bg-secondary rounded w-1/4" />
+            <div className="h-6 bg-secondary rounded w-full" />
+            <div className="h-6 bg-secondary rounded w-3/4" />
+            <div className="h-4 bg-secondary rounded w-1/2" />
+            <div className="space-y-2 mt-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-3 bg-secondary rounded" style={{ width: `${90 - i * 5}%` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <BottomNav />
       </div>
     );
   }
@@ -103,33 +139,57 @@ const ArticlePage = () => {
     { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}` },
   ];
 
+  // SEO keywords display
+  const seoKeywords = (article as any).seo_keywords;
+  const keywordsList = seoKeywords ? seoKeywords.split(",").map((k: string) => k.trim()).filter(Boolean) : [];
+
   return (
     <div className="min-h-screen bg-background pb-20" dir={isRTL ? "rtl" : "ltr"}>
+      {/* Sticky header with back button */}
       <header className="sticky top-0 z-40 h-12 flex items-center gap-3 px-4 bg-background/95 backdrop-blur border-b border-border">
-        <button onClick={() => navigate(-1)} className="text-foreground">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
+          aria-label="العودة"
+        >
           {isRTL ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
+          <span className="text-xs font-medium hidden sm:inline">{isRTL ? "رجوع" : "Back"}</span>
         </button>
         <span className="text-foreground font-bold text-sm truncate flex-1">{title}</span>
-        <button onClick={handleFav}>
-          <Heart size={18} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} />
+        <button onClick={handleFav} className="transition-transform active:scale-110">
+          <Heart size={18} className={`transition-colors ${isFav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
         </button>
       </header>
 
+      {/* Hero image */}
       {article.image_url && !imgError && (
         <div className="w-full bg-secondary">
-          <img src={article.image_url} alt={title} className="w-full max-h-[400px] object-contain" onError={() => setImgError(true)} />
+          <img
+            src={article.image_url}
+            alt={title}
+            className="w-full max-h-[400px] object-cover"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
         </div>
       )}
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-screen-md mx-auto">
+        {/* Meta info */}
         <div className="flex items-center gap-2 text-xs flex-wrap">
-          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">{article.category}</span>
+          <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">{article.category}</span>
           <span className="text-muted-foreground">{timeAgo(article.published_at, lang)}</span>
-          {article.views != null && <span className="text-muted-foreground">• {article.views} {isRTL ? "مشاهدة" : "views"}</span>}
+          {article.views != null && (
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Eye size={12} /> {article.views}
+            </span>
+          )}
         </div>
 
-        <h1 className="text-foreground text-xl font-bold leading-tight">{title}</h1>
+        {/* Title */}
+        <h1 className="text-foreground text-xl md:text-2xl font-bold leading-tight">{title}</h1>
 
+        {/* Author & Source */}
         {(article.author_name || sourceName) && (
           <div className="flex items-center gap-2 flex-wrap">
             {article.author_image_url && (
@@ -144,15 +204,27 @@ const ArticlePage = () => {
           </div>
         )}
 
-        <div className="text-foreground text-sm leading-[1.8] whitespace-pre-wrap">{displayContent}</div>
+        {/* Content */}
+        <div className="text-foreground text-sm md:text-base leading-[1.9] whitespace-pre-wrap">{displayContent}</div>
+
+        {/* SEO Keywords / Tags */}
+        {keywordsList.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {keywordsList.map((tag: string, i: number) => (
+              <span key={i} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Original source link */}
-        {article.url && (
+        {article.url && !article.url.startsWith("#") && (
           <a
             href={article.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-primary text-sm font-medium hover:underline py-2"
+            className="inline-flex items-center gap-2 text-primary text-sm font-medium hover:underline py-2 transition-colors"
           >
             <ExternalLink size={16} />
             {isRTL ? "المصدر الأصلي" : "Original Source"}
@@ -165,12 +237,12 @@ const ArticlePage = () => {
           <div className="flex flex-wrap gap-2">
             {shareButtons.map(btn => (
               <a key={btn.name} href={btn.url} target="_blank" rel="noopener noreferrer"
-                className={`${btn.color} text-white px-4 py-2 rounded-lg text-xs font-medium`}>
+                className={`${btn.color} text-white px-4 py-2 rounded-lg text-xs font-medium transition-opacity hover:opacity-90`}>
                 {btn.name}
               </a>
             ))}
             <button onClick={handleCopy}
-              className="bg-secondary text-foreground px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
+              className="bg-secondary text-foreground px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors hover:bg-accent">
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? (isRTL ? "تم النسخ" : "Copied") : (isRTL ? "نسخ الرابط" : "Copy Link")}
             </button>
@@ -188,8 +260,11 @@ const ArticlePage = () => {
                 return (
                   <div
                     key={ra.id}
-                    onClick={() => navigate(`/article/${ra.id}`)}
-                    className="flex gap-3 cursor-pointer border-b border-border pb-3 last:border-0"
+                    onClick={() => {
+                      sessionStorage.setItem("eram_scroll_pos", String(window.scrollY));
+                      navigate(`/article/${ra.id}`);
+                    }}
+                    className="flex gap-3 cursor-pointer border-b border-border pb-3 last:border-0 hover:bg-accent/30 rounded-lg p-2 -mx-2 transition-colors"
                     dir={isRTL ? "rtl" : "ltr"}
                   >
                     {raHasImage && (
@@ -197,6 +272,7 @@ const ArticlePage = () => {
                         src={ra.image_url!}
                         alt={raTitle}
                         className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-secondary"
+                        loading="lazy"
                         onError={(e) => (e.currentTarget.style.display = "none")}
                       />
                     )}
