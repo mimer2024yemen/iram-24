@@ -72,9 +72,11 @@ export type Database = {
           language: string
           published_at: string | null
           seo_keywords: string | null
+          show_source: boolean
           source_id: string | null
           title: string
           url: string
+          video_url: string | null
           views: number | null
         }
         Insert: {
@@ -93,9 +95,11 @@ export type Database = {
           language: string
           published_at?: string | null
           seo_keywords?: string | null
+          show_source?: boolean
           source_id?: string | null
           title: string
           url: string
+          video_url?: string | null
           views?: number | null
         }
         Update: {
@@ -114,9 +118,11 @@ export type Database = {
           language?: string
           published_at?: string | null
           seo_keywords?: string | null
+          show_source?: boolean
           source_id?: string | null
           title?: string
           url?: string
+          video_url?: string | null
           views?: number | null
         }
         Relationships: [
@@ -251,6 +257,8 @@ export type Database = {
       }
       news_sources: {
         Row: {
+          alt_source_name: string | null
+          alt_source_url: string | null
           article_count: number | null
           category: string | null
           created_at: string
@@ -262,12 +270,15 @@ export type Database = {
           last_fetch: string | null
           last_fetch_status: string | null
           name: string
+          show_source: boolean
           slug: string | null
           updated_at: string
           url: string
           website_url: string | null
         }
         Insert: {
+          alt_source_name?: string | null
+          alt_source_url?: string | null
           article_count?: number | null
           category?: string | null
           created_at?: string
@@ -279,12 +290,15 @@ export type Database = {
           last_fetch?: string | null
           last_fetch_status?: string | null
           name: string
+          show_source?: boolean
           slug?: string | null
           updated_at?: string
           url: string
           website_url?: string | null
         }
         Update: {
+          alt_source_name?: string | null
+          alt_source_url?: string | null
           article_count?: number | null
           category?: string | null
           created_at?: string
@@ -296,6 +310,7 @@ export type Database = {
           last_fetch?: string | null
           last_fetch_status?: string | null
           name?: string
+          show_source?: boolean
           slug?: string | null
           updated_at?: string
           url?: string

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Sparkles, Loader2, Upload, X, Wand2, RefreshCw, PenLine,
   FileText, Hash, Eraser, Save, ArrowRight, Image as ImageIcon,
-  ExternalLink, Eye, EyeOff, Download
+  ExternalLink, Eye, EyeOff, Download, Video, Link
 } from "lucide-react";
 
 interface ArticleEditPageProps {
@@ -25,12 +25,17 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
   const [breakingDuration, setBreakingDuration] = useState(60);
   const [sourceUrl, setSourceUrl] = useState("");
   const [showSource, setShowSource] = useState(true);
+  const [videoUrl, setVideoUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [fetchingContent, setFetchingContent] = useState(false);
   const [newImage, setNewImage] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  const [newVideo, setNewVideo] = useState<File | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [sourceEditable, setSourceEditable] = useState(false);
   const imageRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -47,6 +52,8 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         setSeoKeywords((data as any).seo_keywords || "");
         setIsBreaking((data as any).is_breaking || false);
         setBreakingDuration((data as any).breaking_duration || 60);
+        setShowSource((data as any).show_source !== false);
+        setVideoUrl((data as any).video_url || "");
       }
     };
     load();
@@ -60,65 +67,27 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-
       switch (action) {
-        case "improve_title":
-          if (data.newTitle) setTitle(data.newTitle);
-          toast.success("تم تحسين العنوان");
-          break;
-        case "generate_content":
-          if (data.newContent) setContent(data.newContent);
-          if (data.summary) setDescription(data.summary);
-          toast.success("تم توليد المحتوى");
-          break;
-        case "improve_content":
-          if (data.newContent) setContent(data.newContent);
-          toast.success("تم تحسين المحتوى");
-          break;
-        case "full_rewrite":
-          if (data.newTitle) setTitle(data.newTitle);
-          if (data.newContent) setContent(data.newContent);
-          if (data.summary) setDescription(data.summary);
-          toast.success("تمت إعادة الكتابة بالكامل");
-          break;
-        case "seo_optimize":
-          if (data.keywords) setSeoKeywords(data.keywords.join(", "));
-          if (data.metaDescription) setDescription(data.metaDescription);
-          toast.success("تم تحسين SEO");
-          break;
-        case "clean_text":
-          if (data.cleanedContent) setContent(data.cleanedContent);
-          toast.success("تم تنظيف النص");
-          break;
+        case "improve_title": if (data.newTitle) setTitle(data.newTitle); toast.success("تم تحسين العنوان"); break;
+        case "generate_content": if (data.newContent) setContent(data.newContent); if (data.summary) setDescription(data.summary); toast.success("تم توليد المحتوى"); break;
+        case "improve_content": if (data.newContent) setContent(data.newContent); toast.success("تم تحسين المحتوى"); break;
+        case "full_rewrite": if (data.newTitle) setTitle(data.newTitle); if (data.newContent) setContent(data.newContent); if (data.summary) setDescription(data.summary); toast.success("تمت إعادة الكتابة بالكامل"); break;
+        case "seo_optimize": if (data.keywords) setSeoKeywords(data.keywords.join(", ")); if (data.metaDescription) setDescription(data.metaDescription); toast.success("تم تحسين SEO"); break;
+        case "clean_text": if (data.cleanedContent) setContent(data.cleanedContent); toast.success("تم تنظيف النص"); break;
       }
-    } catch (e: any) {
-      toast.error(e.message || "خطأ في الذكاء الاصطناعي");
-    }
+    } catch (e: any) { toast.error(e.message || "خطأ في الذكاء الاصطناعي"); }
     setAiLoading(null);
   };
 
-  // Fetch original content from source URL
   const fetchOriginalContent = async () => {
-    if (!sourceUrl || sourceUrl.startsWith("#")) {
-      toast.error("لا يوجد رابط مصدر صالح");
-      return;
-    }
+    if (!sourceUrl || sourceUrl.startsWith("#")) { toast.error("لا يوجد رابط مصدر صالح"); return; }
     setFetchingContent(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-article-content", {
-        body: { url: sourceUrl }
-      });
+      const { data, error } = await supabase.functions.invoke("fetch-article-content", { body: { url: sourceUrl } });
       if (error) throw error;
-      if (data?.content) {
-        setContent(data.content);
-        if (data.description) setDescription(data.description);
-        toast.success("تم جلب المحتوى من المصدر");
-      } else {
-        toast.error("لم يتم العثور على محتوى");
-      }
-    } catch (e: any) {
-      toast.error("فشل جلب المحتوى من المصدر");
-    }
+      if (data?.content) { setContent(data.content); if (data.description) setDescription(data.description); toast.success("تم جلب المحتوى من المصدر"); }
+      else toast.error("لم يتم العثور على محتوى");
+    } catch { toast.error("فشل جلب المحتوى من المصدر"); }
     setFetchingContent(false);
   };
 
@@ -127,6 +96,13 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
     const reader = new FileReader();
     reader.onload = (e) => setNewImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleVideoSelect = (file: File) => {
+    const maxSize = 500 * 1024 * 1024; // 500MB
+    if (file.size > maxSize) { toast.error("حجم الفيديو أكبر من 500MB"); return; }
+    setNewVideo(file);
+    toast.info(`تم اختيار الفيديو: ${file.name}`);
   };
 
   const handleSave = async () => {
@@ -142,6 +118,18 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         finalImageUrl = urlData.publicUrl;
       }
 
+      let finalVideoUrl = videoUrl;
+      if (newVideo) {
+        setUploadingVideo(true);
+        const ext = newVideo.name.split(".").pop();
+        const fileName = `videos/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: vErr } = await supabase.storage.from("article-videos").upload(fileName, newVideo);
+        if (vErr) throw vErr;
+        const { data: vUrl } = supabase.storage.from("article-videos").getPublicUrl(fileName);
+        finalVideoUrl = vUrl.publicUrl;
+        setUploadingVideo(false);
+      }
+
       const { error } = await supabase.from("articles").update({
         title,
         content: content || null,
@@ -152,14 +140,16 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         seo_keywords: seoKeywords || null,
         is_breaking: isBreaking,
         breaking_duration: isBreaking ? breakingDuration : null,
+        url: sourceUrl,
+        show_source: showSource,
+        video_url: finalVideoUrl || null,
       } as any).eq("id", articleId);
 
       if (error) throw error;
       toast.success("تم الحفظ والنشر");
-    } catch (e: any) {
-      toast.error(e.message || "خطأ في الحفظ");
-    }
+    } catch (e: any) { toast.error(e.message || "خطأ في الحفظ"); }
     setSaving(false);
+    setUploadingVideo(false);
   };
 
   const aiTools = [
@@ -195,42 +185,44 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
           </div>
         </div>
 
-        {/* Fetch Content from Source */}
-        {sourceUrl && !sourceUrl.startsWith("#") && (
-          <div className="bg-card rounded-lg p-3 border border-border space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-foreground text-xs font-bold flex items-center gap-1">
-                <ExternalLink size={12} className="text-primary" /> المصدر الأصلي
-              </p>
-              <button
-                onClick={() => setShowSource(!showSource)}
-                className="text-muted-foreground hover:text-foreground p-1"
-                title={showSource ? "إخفاء الرابط" : "إظهار الرابط"}
-              >
-                {showSource ? <EyeOff size={14} /> : <Eye size={14} />}
+        {/* Source URL with Show/Hide & Edit */}
+        <div className="bg-card rounded-lg p-3 border border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-foreground text-xs font-bold flex items-center gap-1">
+              <ExternalLink size={12} className="text-primary" /> رابط المصدر
+            </p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setSourceEditable(!sourceEditable)}
+                className="text-muted-foreground hover:text-foreground p-1" title="تعديل الرابط">
+                <Link size={13} />
+              </button>
+              <button onClick={() => setShowSource(!showSource)}
+                className={`p-1 transition-colors ${showSource ? 'text-green-400' : 'text-orange-400'}`}
+                title={showSource ? "إخفاء الرابط من واجهة الخبر" : "إظهار الرابط في واجهة الخبر"}>
+                {showSource ? <Eye size={14} /> : <EyeOff size={14} />}
               </button>
             </div>
-            {showSource && (
-              <input
-                value={sourceUrl}
-                readOnly
-                dir="ltr"
-                className="w-full px-3 py-1.5 rounded-lg bg-input text-foreground border border-border text-xs font-mono"
-              />
-            )}
-            <button
-              onClick={fetchOriginalContent}
-              disabled={fetchingContent}
-              className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
-            >
-              {fetchingContent ? (
-                <><Loader2 size={12} className="animate-spin" /> جاري الجلب...</>
-              ) : (
-                <><Download size={12} /> جلب المحتوى من المصدر</>
-              )}
-            </button>
           </div>
-        )}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${showSource ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+              {showSource ? "ظاهر للمستخدم" : "مخفي عن المستخدم"}
+            </span>
+          </div>
+          <input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            readOnly={!sourceEditable}
+            dir="ltr"
+            placeholder="رابط المصدر الأصلي"
+            className={`w-full px-3 py-1.5 rounded-lg bg-input text-foreground border border-border text-xs font-mono ${!sourceEditable ? 'opacity-70' : ''}`}
+          />
+          {sourceUrl && !sourceUrl.startsWith("#") && (
+            <button onClick={fetchOriginalContent} disabled={fetchingContent}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors">
+              {fetchingContent ? <><Loader2 size={12} className="animate-spin" /> جاري الجلب...</> : <><Download size={12} /> جلب المحتوى من المصدر</>}
+            </button>
+          )}
+        </div>
 
         {/* Title */}
         <div>
@@ -242,16 +234,14 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         {/* Content */}
         <div>
           <label className="text-foreground text-sm mb-1 block">المحتوى</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)}
-            rows={10}
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={10}
             className="w-full px-3 py-2 rounded-lg bg-input text-foreground border border-border text-sm resize-y" />
         </div>
 
         {/* Description */}
         <div>
           <label className="text-foreground text-sm mb-1 block">الوصف المختصر</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-            rows={2}
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
             className="w-full px-3 py-2 rounded-lg bg-input text-foreground border border-border text-sm resize-y" />
         </div>
 
@@ -264,19 +254,44 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
             <div className="relative">
               <img src={displayImage} alt="" className="w-full rounded-lg object-contain max-h-48 bg-card" />
               <div className="absolute top-2 left-2 flex gap-1">
-                <button onClick={() => imageRef.current?.click()} className="bg-background/80 rounded-full p-1.5">
-                  <Upload size={12} className="text-foreground" />
-                </button>
-                <button onClick={() => { setImageUrl(""); setNewImage(null); setNewImagePreview(null); }} className="bg-background/80 rounded-full p-1.5">
-                  <X size={12} className="text-foreground" />
-                </button>
+                <button onClick={() => imageRef.current?.click()} className="bg-background/80 rounded-full p-1.5"><Upload size={12} className="text-foreground" /></button>
+                <button onClick={() => { setImageUrl(""); setNewImage(null); setNewImagePreview(null); }} className="bg-background/80 rounded-full p-1.5"><X size={12} className="text-foreground" /></button>
               </div>
             </div>
           ) : (
             <button onClick={() => imageRef.current?.click()}
               className="w-full py-6 border-2 border-dashed border-border rounded-lg flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground">
-              <ImageIcon size={20} />
-              <span className="text-xs">رفع صورة</span>
+              <ImageIcon size={20} /><span className="text-xs">رفع صورة</span>
+            </button>
+          )}
+        </div>
+
+        {/* Video Upload */}
+        <div>
+          <label className="text-foreground text-sm mb-1 block flex items-center gap-1.5">
+            <Video size={14} className="text-primary" /> فيديو (اختياري)
+          </label>
+          <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/*" className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleVideoSelect(e.target.files[0])} />
+          {videoUrl || newVideo ? (
+            <div className="space-y-2">
+              {videoUrl && !newVideo && (
+                <video src={videoUrl} controls className="w-full rounded-lg max-h-48 bg-card" />
+              )}
+              {newVideo && (
+                <p className="text-xs text-muted-foreground bg-card rounded-lg p-2 border border-border">
+                  📹 {newVideo.name} ({(newVideo.size / 1024 / 1024).toFixed(1)} MB)
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => videoRef.current?.click()} className="text-xs text-primary hover:underline">تغيير الفيديو</button>
+                <button onClick={() => { setVideoUrl(""); setNewVideo(null); }} className="text-xs text-destructive hover:underline">حذف الفيديو</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => videoRef.current?.click()}
+              className="w-full py-4 border-2 border-dashed border-border rounded-lg flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <Video size={20} /><span className="text-xs">رفع فيديو (MP4, WEBM, MOV)</span>
             </button>
           )}
         </div>
@@ -291,8 +306,7 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         {/* SEO Keywords */}
         <div>
           <label className="text-foreground text-sm mb-1 block">كلمات مفتاحية / هاشتاقات</label>
-          <input value={seoKeywords} onChange={(e) => setSeoKeywords(e.target.value)}
-            placeholder="كلمة1, كلمة2, كلمة3"
+          <input value={seoKeywords} onChange={(e) => setSeoKeywords(e.target.value)} placeholder="كلمة1, كلمة2, كلمة3"
             className="w-full px-3 py-2 rounded-lg bg-input text-foreground border border-border text-sm" />
           {seoKeywords && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -306,15 +320,13 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
         {/* Breaking News Toggle */}
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={isBreaking} onChange={(e) => setIsBreaking(e.target.checked)}
-              className="rounded border-border" />
+            <input type="checkbox" checked={isBreaking} onChange={(e) => setIsBreaking(e.target.checked)} className="rounded border-border" />
             <span className="text-foreground text-sm">🚨 خبر عاجل</span>
           </label>
           {isBreaking && (
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground text-xs">مدة:</span>
-              <input type="number" value={breakingDuration} onChange={(e) => setBreakingDuration(+e.target.value)}
-                min={10} max={3600}
+              <input type="number" value={breakingDuration} onChange={(e) => setBreakingDuration(+e.target.value)} min={10} max={3600}
                 className="w-16 px-2 py-1 rounded bg-input text-foreground border border-border text-xs" />
               <span className="text-muted-foreground text-xs">ث</span>
             </div>
@@ -323,14 +335,12 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
 
         {/* Save / Cancel */}
         <div className="flex gap-2">
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={saving || uploadingVideo}
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {saving ? "جاري الحفظ..." : "💾 حفظ ونشر"}
+            {uploadingVideo ? "جاري رفع الفيديو..." : saving ? "جاري الحفظ..." : "💾 حفظ ونشر"}
           </button>
-          <button onClick={onBack} className="px-6 py-3 text-muted-foreground rounded-lg text-sm border border-border">
-            ❌ إلغاء
-          </button>
+          <button onClick={onBack} className="px-6 py-3 text-muted-foreground rounded-lg text-sm border border-border">❌ إلغاء</button>
         </div>
       </div>
     </div>
