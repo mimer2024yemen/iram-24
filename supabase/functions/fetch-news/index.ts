@@ -254,7 +254,15 @@ serve(async (req) => {
 
         for (const item of items) {
           const hash = hashString(item.title + item.link);
-          const category = categorize(item.title, item.description, source.language);
+          
+          // Check for existing article with same title (dedup by title)
+          const { data: existing } = await supabase.from("articles")
+            .select("id").eq("title", item.title).limit(1);
+          if (existing && existing.length > 0) continue;
+          
+          const category = source.category && source.category !== "none"
+            ? source.category
+            : categorize(item.title, item.description, source.language);
 
           // Try to fetch og:image if no image found
           let finalImage = item.imageUrl;
