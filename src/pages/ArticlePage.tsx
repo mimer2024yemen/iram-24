@@ -8,6 +8,13 @@ import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 
+interface SourceInfo {
+  name: string;
+  show_source: boolean;
+  alt_source_name: string | null;
+  alt_source_url: string | null;
+}
+
 const ArticlePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -17,16 +24,13 @@ const ArticlePage = () => {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
-  const [sourceName, setSourceName] = useState<string | null>(null);
+  const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
 
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
 
-  // Save scroll position before navigating away
   useEffect(() => {
-    const saveScroll = () => {
-      sessionStorage.setItem("eram_scroll_pos", String(window.scrollY));
-    };
+    const saveScroll = () => { sessionStorage.setItem("eram_scroll_pos", String(window.scrollY)); };
     window.addEventListener("beforeunload", saveScroll);
     return () => window.removeEventListener("beforeunload", saveScroll);
   }, []);
@@ -36,40 +40,35 @@ const ArticlePage = () => {
     const fetchArticle = async () => {
       setLoading(true);
       setRelatedArticles([]);
-      setSourceName(null);
+      setSourceInfo(null);
       const { data } = await supabase.from("articles").select("*").eq("id", id).single();
       if (data) {
         setArticle(data as any);
         await supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id);
 
         if (data.source_id) {
-          const { data: src } = await supabase.from("news_sources").select("name, website_url, url").eq("id", data.source_id).single();
-          if (src) setSourceName(src.name);
+          const { data: src } = await supabase.from("news_sources")
+            .select("name, website_url, url, show_source, alt_source_name, alt_source_url")
+            .eq("id", data.source_id).single();
+          if (src) setSourceInfo(src as any);
         }
 
-        const { data: related } = await supabase
-          .from("articles")
-          .select("*")
-          .eq("category", data.category)
-          .eq("language", data.language)
-          .neq("id", id)
-          .order("published_at", { ascending: false })
-          .limit(5);
+        const { data: related } = await supabase.from("articles").select("*")
+          .eq("category", data.category).eq("language", data.language)
+          .neq("id", id).order("published_at", { ascending: false }).limit(5);
         if (related) setRelatedArticles(related as any);
       }
       setLoading(false);
     };
     fetchArticle();
+    window.scrollTo({ top: 0 });
   }, [id]);
 
   const handleBack = () => {
     navigate(-1);
-    // Restore scroll position after navigation
     setTimeout(() => {
       const savedPos = sessionStorage.getItem("eram_scroll_pos");
-      if (savedPos) {
-        window.scrollTo({ top: parseInt(savedPos), behavior: "smooth" });
-      }
+      if (savedPos) window.scrollTo({ top: parseInt(savedPos), behavior: "smooth" });
     }, 100);
   };
 
@@ -83,15 +82,7 @@ const ArticlePage = () => {
         <div className="animate-pulse">
           <div className="w-full aspect-video bg-secondary" />
           <div className="p-4 space-y-3">
-            <div className="h-3 bg-secondary rounded w-1/4" />
-            <div className="h-6 bg-secondary rounded w-full" />
-            <div className="h-6 bg-secondary rounded w-3/4" />
-            <div className="h-4 bg-secondary rounded w-1/2" />
-            <div className="space-y-2 mt-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-3 bg-secondary rounded" style={{ width: `${90 - i * 5}%` }} />
-              ))}
-            </div>
+            {[...Array(6)].map((_, i) => <div key={i} className="h-4 bg-secondary rounded" style={{ width: `${90 - i * 8}%` }} />)}
           </div>
         </div>
         <BottomNav />
@@ -112,9 +103,7 @@ const ArticlePage = () => {
   const articleUrl = `${window.location.origin}/article/${article.id}`;
   const title = decodeHtmlEntities(article.title);
   const shareText = `${title} - إيرام24\n${articleUrl}`;
-
   const handleFav = () => setFavs(toggleFavorite(article.id));
-
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
     setCopied(true);
@@ -132,6 +121,24 @@ const ArticlePage = () => {
 
   const displayContent = cleanContent(article.content) || cleanContent(article.description) || (isRTL ? "لا يوجد محتوى إضافي" : "No additional content");
 
+  // Determine source display logic
+  const articleShowSource = (article as any).show_source !== false;
+  const sourceShowSource = sourceInfo?.show_source !== false;
+  const shouldShowSource = articleShowSource && sourceShowSource;
+
+  // Determine display source name/url
+  const displaySourceName = (sourceInfo?.show_source === false && sourceInfo?.alt_source_name)
+    ? sourceInfo.alt_source_name
+    : sourceInfo?.name || null;
+
+  const displaySourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
+    ? sourceInfo.alt_source_url
+    : (shouldShowSource ? article.url : null);
+
+  const videoUrl = (article as any).video_url;
+  const seoKeywords = (article as any).seo_keywords;
+  const keywordsList = seoKeywords ? seoKeywords.split(",").map((k: string) => k.trim()).filter(Boolean) : [];
+
   const shareButtons = [
     { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` },
     { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(title + " - إيرام24")}` },
@@ -139,19 +146,10 @@ const ArticlePage = () => {
     { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}` },
   ];
 
-  // SEO keywords display
-  const seoKeywords = (article as any).seo_keywords;
-  const keywordsList = seoKeywords ? seoKeywords.split(",").map((k: string) => k.trim()).filter(Boolean) : [];
-
   return (
     <div className="min-h-screen bg-background pb-20" dir={isRTL ? "rtl" : "ltr"}>
-      {/* Sticky header with back button */}
       <header className="sticky top-0 z-40 h-12 flex items-center gap-3 px-4 bg-background/95 backdrop-blur border-b border-border">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
-          aria-label="العودة"
-        >
+        <button onClick={handleBack} className="flex items-center gap-1 text-foreground hover:text-primary transition-colors" aria-label="العودة">
           {isRTL ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
           <span className="text-xs font-medium hidden sm:inline">{isRTL ? "رجوع" : "Back"}</span>
         </button>
@@ -161,77 +159,65 @@ const ArticlePage = () => {
         </button>
       </header>
 
-      {/* Hero image */}
+      {/* Hero image - only if exists */}
       {article.image_url && !imgError && (
         <div className="w-full bg-secondary">
-          <img
-            src={article.image_url}
-            alt={title}
-            className="w-full max-h-[400px] object-cover"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
+          <img src={article.image_url} alt={title} className="w-full max-h-[400px] object-cover" loading="lazy" onError={() => setImgError(true)} />
         </div>
       )}
 
       <div className="p-4 space-y-4 max-w-screen-md mx-auto">
-        {/* Meta info */}
+        {/* Meta */}
         <div className="flex items-center gap-2 text-xs flex-wrap">
           <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">{article.category}</span>
           <span className="text-muted-foreground">{timeAgo(article.published_at, lang)}</span>
           {article.views != null && (
-            <span className="text-muted-foreground flex items-center gap-1">
-              <Eye size={12} /> {article.views}
-            </span>
+            <span className="text-muted-foreground flex items-center gap-1"><Eye size={12} /> {article.views}</span>
           )}
         </div>
 
-        {/* Title */}
         <h1 className="text-foreground text-xl md:text-2xl font-bold leading-tight">{title}</h1>
 
         {/* Author & Source */}
-        {(article.author_name || sourceName) && (
+        {(article.author_name || displaySourceName) && (
           <div className="flex items-center gap-2 flex-wrap">
-            {article.author_image_url && (
-              <img src={article.author_image_url} alt={article.author_name || ""} className="w-8 h-8 rounded-full object-cover" />
-            )}
+            {article.author_image_url && <img src={article.author_image_url} alt={article.author_name || ""} className="w-8 h-8 rounded-full object-cover" />}
             {article.author_name && <span className="text-muted-foreground text-sm">{article.author_name}</span>}
-            {sourceName && (
-              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                {sourceName}
-              </span>
+            {displaySourceName && (
+              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">{displaySourceName}</span>
             )}
+          </div>
+        )}
+
+        {/* Video */}
+        {videoUrl && (
+          <div className="rounded-xl overflow-hidden bg-card border border-border">
+            <video src={videoUrl} controls className="w-full max-h-[400px]" preload="metadata" />
           </div>
         )}
 
         {/* Content */}
         <div className="text-foreground text-sm md:text-base leading-[1.9] whitespace-pre-wrap">{displayContent}</div>
 
-        {/* SEO Keywords / Tags */}
+        {/* SEO Keywords */}
         {keywordsList.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-2">
             {keywordsList.map((tag: string, i: number) => (
-              <span key={i} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
-                #{tag}
-              </span>
+              <span key={i} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">#{tag}</span>
             ))}
           </div>
         )}
 
-        {/* Original source link */}
-        {article.url && !article.url.startsWith("#") && (
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-primary text-sm font-medium hover:underline py-2 transition-colors"
-          >
+        {/* Source link - respects visibility */}
+        {displaySourceUrl && !displaySourceUrl.startsWith("#") && (
+          <a href={displaySourceUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
             <ExternalLink size={16} />
-            {isRTL ? "المصدر الأصلي" : "Original Source"}
+            {sourceInfo?.alt_source_name && !sourceInfo?.show_source ? sourceInfo.alt_source_name : (isRTL ? "المصدر الرسمي" : "Official Source")}
           </a>
         )}
 
-        {/* Share section */}
+        {/* Share */}
         <div className="border-t border-border pt-4 space-y-3">
           <p className="text-foreground text-sm font-bold">{isRTL ? "مشاركة الخبر" : "Share"}</p>
           <div className="flex flex-wrap gap-2">
@@ -249,32 +235,19 @@ const ArticlePage = () => {
           </div>
         </div>
 
-        {/* Related news */}
+        {/* Related */}
         {relatedArticles.length > 0 && (
           <div className="border-t border-border pt-4 space-y-3">
             <p className="text-foreground text-sm font-bold">{isRTL ? "أخبار ذات صلة" : "Related News"}</p>
             <div className="space-y-3">
               {relatedArticles.map((ra) => {
                 const raTitle = decodeHtmlEntities(ra.title);
-                const raHasImage = !!(ra.image_url && ra.image_url.trim() !== "");
+                const raHasImage = !!(ra.image_url && ra.image_url.trim());
                 return (
-                  <div
-                    key={ra.id}
-                    onClick={() => {
-                      sessionStorage.setItem("eram_scroll_pos", String(window.scrollY));
-                      navigate(`/article/${ra.id}`);
-                    }}
-                    className="flex gap-3 cursor-pointer border-b border-border pb-3 last:border-0 hover:bg-accent/30 rounded-lg p-2 -mx-2 transition-colors"
-                    dir={isRTL ? "rtl" : "ltr"}
-                  >
+                  <div key={ra.id} onClick={() => { sessionStorage.setItem("eram_scroll_pos", String(window.scrollY)); navigate(`/article/${ra.id}`); }}
+                    className="flex gap-3 cursor-pointer border-b border-border pb-3 last:border-0 hover:bg-accent/30 rounded-lg p-2 -mx-2 transition-colors" dir={isRTL ? "rtl" : "ltr"}>
                     {raHasImage && (
-                      <img
-                        src={ra.image_url!}
-                        alt={raTitle}
-                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-secondary"
-                        loading="lazy"
-                        onError={(e) => (e.currentTarget.style.display = "none")}
-                      />
+                      <img src={ra.image_url!} alt={raTitle} className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-secondary" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
                     )}
                     <div className="flex-1 min-w-0">
                       <h4 className="text-foreground text-sm font-medium line-clamp-2">{raTitle}</h4>
@@ -287,7 +260,6 @@ const ArticlePage = () => {
           </div>
         )}
       </div>
-
       <BottomNav />
     </div>
   );
