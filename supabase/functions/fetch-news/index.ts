@@ -114,7 +114,7 @@ function parseRSSItems(xml: string): Array<{
 }
 
 function parseAtomItems(xml: string): Array<{
-  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null;
+  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
 }> {
   const items: any[] = [];
   const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
@@ -136,10 +136,12 @@ function parseAtomItems(xml: string): Array<{
 
     let imageUrl: string | null = null;
     const imgMatch = (contentTag || summary).match(/<img[^>]*src="([^"]*)"/i);
-    if (imgMatch) imageUrl = imgMatch[1];
+    if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
+
+    const videoUrl = extractVideoUrl(contentTag) || extractVideoUrl(summary) || null;
 
     if (title && link) {
-      items.push({ title, link, description, pubDate: updated, imageUrl, content });
+      items.push({ title, link, description, pubDate: updated, imageUrl, content, videoUrl });
     }
   }
   return items;
