@@ -46,8 +46,25 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+function normalizeImageUrl(url: string): string {
+  if (!url) return url;
+  url = url.replace(/&amp;/g, "&");
+  if (url.includes("pbs.twimg.com")) {
+    url = url.replace(/name=\w+/, "name=orig");
+    if (!url.includes("name=")) url += (url.includes("?") ? "&" : "?") + "name=orig";
+  }
+  return url;
+}
+
+function extractVideoUrl(html: string): string | null {
+  if (!html) return null;
+  const videoMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i)
+    || html.match(/<source[^>]+src=["']([^"']*\.(?:mp4|webm|mov|m3u8)[^"']*)["']/i);
+  return videoMatch ? videoMatch[1] : null;
+}
+
 function parseRSSItems(xml: string): Array<{
-  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null;
+  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
 }> {
   const items: any[] = [];
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
