@@ -298,10 +298,12 @@ serve(async (req) => {
                 const html = await pageRes.text();
                 const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
                   || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
-                if (ogMatch) finalImage = ogMatch[1];
+                if (ogMatch) finalImage = normalizeImageUrl(ogMatch[1]);
               }
             } catch { /* skip */ }
           }
+
+          if (finalImage) finalImage = normalizeImageUrl(finalImage);
 
           const { error } = await supabase.from("articles").upsert({
             source_id: source.id,
@@ -310,6 +312,7 @@ serve(async (req) => {
             content: item.content || null,
             url: item.link,
             image_url: finalImage,
+            video_url: item.videoUrl || null,
             category,
             language: source.language,
             published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
