@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check, ExternalLink, Eye } 
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import BottomNav from "@/components/BottomNav";
 import LazyImage from "@/components/LazyImage";
-import { normalizeImageUrl, cleanDisplayContent } from "@/lib/contentParser";
+import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
 
@@ -114,14 +114,14 @@ const ArticlePage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const cleanContent = (raw: string | null): string => {
-    if (!raw) return "";
-    let text = decodeHtmlEntities(raw);
-    text = cleanDisplayContent(text);
-    return text;
-  };
-
-  const displayContent = cleanContent(article.content) || cleanContent(article.description) || (isRTL ? "لا يوجد محتوى إضافي" : "No additional content");
+  // Parse content into structured data (text paragraphs, images, videos)
+  const rawContent = article.content || article.description || "";
+  const structured = parseContentToStructured(decodeHtmlEntities(rawContent));
+  const contentImages = structured.images.filter(img => img && img.length > 10);
+  const contentVideos = structured.videos.filter(v => v && v.length > 10);
+  const textParagraphs = structured.text.length > 0
+    ? structured.text
+    : [(isRTL ? "لا يوجد محتوى إضافي" : "No additional content")];
 
   // Determine source display logic
   const articleShowSource = (article as any).show_source !== false;
@@ -176,15 +176,15 @@ const ArticlePage = () => {
 
       <div className="p-4 space-y-4 max-w-screen-md mx-auto">
         {/* Meta */}
-        <div className="flex items-center gap-2 text-xs flex-wrap">
-          <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium">{article.category}</span>
+        <div className="flex items-center gap-2 text-[11px] flex-wrap">
+          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{article.category}</span>
           <span className="text-muted-foreground">{timeAgo(article.published_at, lang)}</span>
           {article.views != null && (
-            <span className="text-muted-foreground flex items-center gap-1"><Eye size={12} /> {article.views}</span>
+            <span className="text-muted-foreground flex items-center gap-1"><Eye size={11} /> {article.views}</span>
           )}
         </div>
 
-        <h1 className="text-foreground text-xl md:text-2xl font-bold leading-tight">{title}</h1>
+        <h1 className="text-foreground text-2xl md:text-3xl font-bold leading-snug">{title}</h1>
 
         {/* Author & Source */}
         {(article.author_name || displaySourceName) && (
@@ -204,8 +204,26 @@ const ArticlePage = () => {
           </div>
         )}
 
-        <article className="article-content text-foreground text-sm md:text-base leading-[1.9] whitespace-pre-wrap break-words overflow-wrap-anywhere">
-          {displayContent}
+        <article className="article-content text-foreground text-base md:text-lg leading-[2] break-words">
+          {/* Extracted images from content */}
+          {contentImages.map((img, i) => (
+            <LazyImage
+              key={`ci-${i}`}
+              src={proxyImageUrl(normalizeImageUrl(img))}
+              alt={`${title} - ${i + 1}`}
+              className="w-full rounded-xl mb-4 object-cover"
+            />
+          ))}
+          {/* Extracted videos from content */}
+          {contentVideos.map((v, i) => (
+            <div key={`cv-${i}`} className="rounded-xl overflow-hidden bg-card border border-border mb-4">
+              <video src={v} controls className="w-full max-h-[450px]" preload="metadata" />
+            </div>
+          ))}
+          {/* Text paragraphs */}
+          {textParagraphs.map((p, i) => (
+            <p key={i} className="mb-3">{p}</p>
+          ))}
         </article>
 
         {/* SEO Keywords */}
