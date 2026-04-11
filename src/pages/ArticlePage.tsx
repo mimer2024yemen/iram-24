@@ -6,6 +6,9 @@ import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
 import { ArrowRight, ArrowLeft, Heart, Share2, Copy, Check, ExternalLink, Eye } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import BottomNav from "@/components/BottomNav";
+import LazyImage from "@/components/LazyImage";
+import { normalizeImageUrl, cleanDisplayContent } from "@/lib/contentParser";
+import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
 
 interface SourceInfo {
@@ -114,9 +117,8 @@ const ArticlePage = () => {
   const cleanContent = (raw: string | null): string => {
     if (!raw) return "";
     let text = decodeHtmlEntities(raw);
-    text = text.replace(/https?:\/\/[^\s]+/g, "");
-    text = text.replace(/(read more|اقرأ أيضا|المزيد|اقرأ المزيد|إقرأ أيضاً).*/gi, "");
-    return text.trim();
+    text = cleanDisplayContent(text);
+    return text;
   };
 
   const displayContent = cleanContent(article.content) || cleanContent(article.description) || (isRTL ? "لا يوجد محتوى إضافي" : "No additional content");
@@ -161,8 +163,14 @@ const ArticlePage = () => {
 
       {/* Hero image - only if exists */}
       {article.image_url && !imgError && (
-        <div className="w-full bg-secondary">
-          <img src={article.image_url} alt={title} className="w-full max-h-[400px] object-cover" loading="lazy" onError={() => setImgError(true)} />
+        <div className="w-full bg-secondary overflow-hidden">
+          <LazyImage
+            src={proxyImageUrl(normalizeImageUrl(article.image_url))}
+            alt={title}
+            className="w-full max-h-[400px] object-cover"
+            loading="eager"
+            onError={() => setImgError(true)}
+          />
         </div>
       )}
 
@@ -196,8 +204,9 @@ const ArticlePage = () => {
           </div>
         )}
 
-        {/* Content */}
-        <div className="text-foreground text-sm md:text-base leading-[1.9] whitespace-pre-wrap">{displayContent}</div>
+        <article className="article-content text-foreground text-sm md:text-base leading-[1.9] whitespace-pre-wrap break-words overflow-wrap-anywhere">
+          {displayContent}
+        </article>
 
         {/* SEO Keywords */}
         {keywordsList.length > 0 && (
