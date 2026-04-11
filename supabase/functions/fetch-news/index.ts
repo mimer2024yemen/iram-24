@@ -46,8 +46,25 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+function normalizeImageUrl(url: string): string {
+  if (!url) return url;
+  url = url.replace(/&amp;/g, "&");
+  if (url.includes("pbs.twimg.com")) {
+    url = url.replace(/name=\w+/, "name=orig");
+    if (!url.includes("name=")) url += (url.includes("?") ? "&" : "?") + "name=orig";
+  }
+  return url;
+}
+
+function extractVideoUrl(html: string): string | null {
+  if (!html) return null;
+  const videoMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i)
+    || html.match(/<source[^>]+src=["']([^"']*\.(?:mp4|webm|mov|m3u8)[^"']*)["']/i);
+  return videoMatch ? videoMatch[1] : null;
+}
+
 function parseRSSItems(xml: string): Array<{
-  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null;
+  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
 }> {
   const items: any[] = [];
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
@@ -68,33 +85,36 @@ function parseRSSItems(xml: string): Array<{
 
     let imageUrl: string | null = null;
     const enclosureMatch = c.match(/url="([^"]*\.(jpg|jpeg|png|gif|webp)[^"]*)"/i);
-    if (enclosureMatch) imageUrl = enclosureMatch[1];
+    if (enclosureMatch) imageUrl = normalizeImageUrl(enclosureMatch[1]);
     if (!imageUrl) {
       const mediaMatch = c.match(/<media:content[^>]*url="([^"]*)"/i);
-      if (mediaMatch) imageUrl = mediaMatch[1];
+      if (mediaMatch) imageUrl = normalizeImageUrl(mediaMatch[1]);
     }
     if (!imageUrl) {
       const mediaThumbnail = c.match(/<media:thumbnail[^>]*url="([^"]*)"/i);
-      if (mediaThumbnail) imageUrl = mediaThumbnail[1];
+      if (mediaThumbnail) imageUrl = normalizeImageUrl(mediaThumbnail[1]);
     }
     if (!imageUrl) {
       const imgMatch = rawDesc.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = imgMatch[1];
+      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
     }
     if (!imageUrl && contentEncoded) {
       const imgMatch = contentEncoded.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = imgMatch[1];
+      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
     }
 
+    // Extract video from content
+    const videoUrl = extractVideoUrl(rawDesc) || extractVideoUrl(contentEncoded) || null;
+
     if (title && link) {
-      items.push({ title, link, description, pubDate, imageUrl, content });
+      items.push({ title, link, description, pubDate, imageUrl, content, videoUrl });
     }
   }
   return items;
 }
 
 function parseAtomItems(xml: string): Array<{
-  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null;
+  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
 }> {
   const items: any[] = [];
   const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
@@ -116,10 +136,12 @@ function parseAtomItems(xml: string): Array<{
 
     let imageUrl: string | null = null;
     const imgMatch = (contentTag || summary).match(/<img[^>]*src="([^"]*)"/i);
-    if (imgMatch) imageUrl = imgMatch[1];
+    if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
+
+    const videoUrl = extractVideoUrl(contentTag) || extractVideoUrl(summary) || null;
 
     if (title && link) {
-      items.push({ title, link, description, pubDate: updated, imageUrl, content });
+      items.push({ title, link, description, pubDate: updated, imageUrl, content, videoUrl });
     }
   }
   return items;
@@ -276,10 +298,12 @@ serve(async (req) => {
                 const html = await pageRes.text();
                 const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
                   || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
-                if (ogMatch) finalImage = ogMatch[1];
+                if (ogMatch) finalImage = normalizeImageUrl(ogMatch[1]);
               }
             } catch { /* skip */ }
           }
+
+          if (finalImage) finalImage = normalizeImageUrl(finalImage);
 
           const { error } = await supabase.from("articles").upsert({
             source_id: source.id,
@@ -288,6 +312,7 @@ serve(async (req) => {
             content: item.content || null,
             url: item.link,
             image_url: finalImage,
+            video_url: item.videoUrl || null,
             category,
             language: source.language,
             published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),

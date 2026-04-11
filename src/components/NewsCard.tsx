@@ -4,6 +4,8 @@ import { timeAgo, toggleFavorite, getFavorites, decodeHtmlEntities } from "@/lib
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
+import { normalizeImageUrl } from "@/lib/contentParser";
+import LazyImage from "@/components/LazyImage";
 
 interface NewsCardProps {
   article: Article;
@@ -40,7 +42,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
   };
 
   const rawImgUrl = article.image_url?.trim() || "";
-  const imgSrc = rawImgUrl ? proxyImageUrl(rawImgUrl) : "";
+  const imgSrc = rawImgUrl ? proxyImageUrl(normalizeImageUrl(rawImgUrl)) : "";
   const hasImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
   const desc = article.description ? decodeHtmlEntities(article.description) : null;
@@ -51,7 +53,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
       <div className="relative rounded-xl overflow-hidden cursor-pointer group bg-card shadow-lg" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
         {hasImage ? (
           <div className="aspect-[16/9] w-full overflow-hidden">
-            <img src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="eager" onError={() => setImgError(true)} />
+            <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="eager" onError={() => setImgError(true)} />
           </div>
         ) : (
           <div className="aspect-[16/9] w-full bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
@@ -78,7 +80,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
       <div className="rounded-xl overflow-hidden cursor-pointer group bg-card shadow-md hover:shadow-lg transition-shadow flex flex-col h-full" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
         {hasImage ? (
           <div className="aspect-[16/10] w-full overflow-hidden">
-            <img src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onError={() => setImgError(true)} />
+            <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={() => setImgError(true)} />
           </div>
         ) : null}
         <div className="p-3 flex flex-col flex-1">
@@ -105,7 +107,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     <div className="flex gap-3 cursor-pointer group py-3 border-b border-border last:border-b-0" dir={language === "AR" ? "rtl" : "ltr"} onClick={goToArticle}>
       {hasImage && (
         <div className="w-24 h-20 md:w-28 md:h-[76px] rounded-lg overflow-hidden bg-secondary shrink-0">
-          <img src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" onError={() => setImgError(true)} />
+          <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={() => setImgError(true)} />
         </div>
       )}
       <div className="flex flex-col justify-between flex-1 min-w-0">
