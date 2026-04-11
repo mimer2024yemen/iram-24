@@ -85,26 +85,29 @@ function parseRSSItems(xml: string): Array<{
 
     let imageUrl: string | null = null;
     const enclosureMatch = c.match(/url="([^"]*\.(jpg|jpeg|png|gif|webp)[^"]*)"/i);
-    if (enclosureMatch) imageUrl = enclosureMatch[1];
+    if (enclosureMatch) imageUrl = normalizeImageUrl(enclosureMatch[1]);
     if (!imageUrl) {
       const mediaMatch = c.match(/<media:content[^>]*url="([^"]*)"/i);
-      if (mediaMatch) imageUrl = mediaMatch[1];
+      if (mediaMatch) imageUrl = normalizeImageUrl(mediaMatch[1]);
     }
     if (!imageUrl) {
       const mediaThumbnail = c.match(/<media:thumbnail[^>]*url="([^"]*)"/i);
-      if (mediaThumbnail) imageUrl = mediaThumbnail[1];
+      if (mediaThumbnail) imageUrl = normalizeImageUrl(mediaThumbnail[1]);
     }
     if (!imageUrl) {
       const imgMatch = rawDesc.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = imgMatch[1];
+      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
     }
     if (!imageUrl && contentEncoded) {
       const imgMatch = contentEncoded.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = imgMatch[1];
+      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
     }
 
+    // Extract video from content
+    const videoUrl = extractVideoUrl(rawDesc) || extractVideoUrl(contentEncoded) || null;
+
     if (title && link) {
-      items.push({ title, link, description, pubDate, imageUrl, content });
+      items.push({ title, link, description, pubDate, imageUrl, content, videoUrl });
     }
   }
   return items;
