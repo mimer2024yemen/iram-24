@@ -4,6 +4,8 @@ import { timeAgo, toggleFavorite, getFavorites, decodeHtmlEntities } from "@/lib
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
+import { normalizeImageUrl } from "@/lib/contentParser";
+import LazyImage from "@/components/LazyImage";
 
 interface NewsCardProps {
   article: Article;
@@ -40,7 +42,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
   };
 
   const rawImgUrl = article.image_url?.trim() || "";
-  const imgSrc = rawImgUrl ? proxyImageUrl(rawImgUrl) : "";
+  const imgSrc = rawImgUrl ? proxyImageUrl(normalizeImageUrl(rawImgUrl)) : "";
   const hasImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
   const desc = article.description ? decodeHtmlEntities(article.description) : null;
