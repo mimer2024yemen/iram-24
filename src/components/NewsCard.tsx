@@ -52,20 +52,19 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     return (
       <div className="relative rounded-xl overflow-hidden cursor-pointer group bg-card shadow-lg" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
         {hasImage ? (
-          <div className="aspect-[16/9] w-full overflow-hidden">
+          <div className="aspect-[2/1] w-full overflow-hidden">
             <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="eager" onError={() => setImgError(true)} />
           </div>
         ) : (
-          <div className="aspect-[16/9] w-full bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
-            <span className="text-4xl opacity-30">📰</span>
+          <div className="aspect-[2/1] w-full bg-gradient-to-br from-primary/20 to-secondary flex items-center justify-center">
+            <span className="text-3xl opacity-30">📰</span>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
-          <span className="inline-block bg-primary text-primary-foreground text-[10px] md:text-xs font-bold px-2 py-0.5 rounded mb-2">{article.category}</span>
-          <h2 className="text-foreground text-base md:text-xl font-bold leading-tight line-clamp-3 mb-1.5">{title}</h2>
-          {desc && <p className="text-foreground/70 text-xs md:text-sm line-clamp-2 mb-2">{desc}</p>}
-          <div className="flex items-center gap-2 text-[10px] md:text-xs text-foreground/60">
+        <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4">
+          <span className="inline-block bg-primary text-primary-foreground text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded mb-1.5">{article.category}</span>
+          <h2 className="text-foreground text-sm md:text-lg font-bold leading-tight line-clamp-2 mb-1">{title}</h2>
+          <div className="flex items-center gap-2 text-[9px] md:text-[10px] text-foreground/60">
             <span>{timeAgo(article.published_at, language)}</span>
             {article.author_name && <><span>•</span><span>{article.author_name}</span></>}
           </div>
@@ -77,24 +76,23 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
   // Medium card
   if (variant === "medium") {
     return (
-      <div className="rounded-xl overflow-hidden cursor-pointer group bg-card shadow-md hover:shadow-lg transition-shadow flex flex-col h-full" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
+      <div className="rounded-lg overflow-hidden cursor-pointer group bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col h-full" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
         {hasImage ? (
-          <div className="aspect-[16/10] w-full overflow-hidden">
+          <div className="aspect-[16/8] w-full overflow-hidden">
             <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={() => setImgError(true)} />
           </div>
         ) : null}
-        <div className="p-3 flex flex-col flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-primary text-[10px] font-bold">{article.category}</span>
-            <span className="text-muted-foreground text-[10px]">{timeAgo(article.published_at, language)}</span>
+        <div className="p-2 flex flex-col flex-1">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-primary text-[9px] font-bold">{article.category}</span>
+            <span className="text-muted-foreground text-[9px]">{timeAgo(article.published_at, language)}</span>
           </div>
-          <h3 className="text-foreground font-bold text-sm leading-snug line-clamp-2 mb-1 flex-1">{title}</h3>
-          {desc && <p className="text-muted-foreground text-xs line-clamp-2 mb-2">{desc}</p>}
-          <div className="flex items-center justify-between mt-auto pt-2 border-t border-border">
-            {article.author_name ? <span className="text-muted-foreground text-[10px] truncate max-w-[60%]">{article.author_name}</span> : <span />}
-            <div className="flex items-center gap-2">
-              <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors"><Share2 size={13} /></button>
-              <button onClick={handleFav} className="transition-transform active:scale-110"><Heart size={13} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} /></button>
+          <h3 className="text-foreground font-bold text-xs leading-snug line-clamp-2 mb-0.5 flex-1">{title}</h3>
+          <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-border">
+            {article.author_name ? <span className="text-muted-foreground text-[9px] truncate max-w-[60%]">{article.author_name}</span> : <span />}
+            <div className="flex items-center gap-1.5">
+              <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors"><Share2 size={11} /></button>
+              <button onClick={handleFav} className="transition-transform active:scale-110"><Heart size={11} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} /></button>
             </div>
           </div>
         </div>
