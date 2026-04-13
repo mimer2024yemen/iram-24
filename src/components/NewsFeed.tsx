@@ -114,32 +114,33 @@ const NewsFeed = () => {
     }
 
     return (
-      <div className="mt-8 mb-4">
-        <p className="text-center text-muted-foreground text-xs mb-3">
+      <div className="mt-6 mb-4">
+        <p className="text-center text-muted-foreground text-[10px] mb-2">
           {isRTL
             ? `عرض ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} من ${totalEstimated}+ نتيجة`
             : `Showing ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} of ${totalEstimated}+ results`}
         </p>
-        <div className="flex items-center justify-center gap-1.5" dir="ltr">
+        <div className="flex items-center justify-center gap-1" dir={isRTL ? "rtl" : "ltr"}>
+          {/* In RTL: "Next" is on the left, "Previous" is on the right — handled by dir=rtl */}
           <button
             onClick={() => setPage(page - 1)}
             disabled={page === 1}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border"
           >
-            <ChevronLeft size={16} />
+            <ChevronRight size={14} />
             <span className="hidden sm:inline">{isRTL ? "السابق" : "Previous"}</span>
           </button>
 
           {pages.map((p, i) =>
             p === "..." ? (
-              <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-muted-foreground text-sm">…</span>
+              <span key={`e${i}`} className="w-7 h-7 flex items-center justify-center text-muted-foreground text-xs">…</span>
             ) : (
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
                   page === p
-                    ? "bg-primary text-primary-foreground shadow-md"
+                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
                     : "bg-card text-foreground hover:bg-accent border border-border"
                 }`}
               >
@@ -151,10 +152,10 @@ const NewsFeed = () => {
           <button
             onClick={() => setPage(page + 1)}
             disabled={!hasMore}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-accent border border-border"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border"
           >
             <span className="hidden sm:inline">{isRTL ? "التالي" : "Next"}</span>
-            <ChevronRight size={16} />
+            <ChevronLeft size={14} />
           </button>
         </div>
       </div>
@@ -197,7 +198,7 @@ const NewsFeed = () => {
                 <NewsCard article={featuredArticle} language={language} variant="featured" onBeforeNavigate={saveScrollPos} />
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
               {(page === 1 ? gridArticles : pageArticles).map((article) => (
                 <NewsCard key={article.id} article={article} language={language} variant="medium" onBeforeNavigate={saveScrollPos} />
               ))}
