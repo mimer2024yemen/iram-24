@@ -6,6 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const REQUEST_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+  "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+  "Accept": "application/rss+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
+};
+
+type ParsedFeedItem = {
+  title: string;
+  link: string;
+  description: string;
+  pubDate: string;
+  imageUrl: string | null;
+  content: string | null;
+  videoUrl: string | null;
+};
+
 function hashString(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -33,6 +49,40 @@ function decodeEntities(text: string): string {
     .replace(/&#x([0-9a-fA-F]+);/g, (_: string, code: string) => String.fromCharCode(parseInt(code, 16)));
 }
 
+function normalizeUrl(url: string): string {
+  if (!url) return "";
+  let normalized = decodeEntities(url).trim().replace(/\s+/g, "");
+  if (normalized.startsWith("//")) normalized = `https:${normalized}`;
+  normalized = normalized.replace(/^http:\/\//i, "https://");
+  return normalized;
+}
+
+function normalizeUrlKey(url: string): string {
+  const normalized = normalizeUrl(url);
+  if (!normalized) return "";
+
+  try {
+    const parsed = new URL(normalized);
+    parsed.hash = "";
+    ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "fbclid", "gclid", "s"].forEach((param) => {
+      parsed.searchParams.delete(param);
+    });
+    return `${parsed.origin}${parsed.pathname.replace(/\/$/, "")}${parsed.search}`.toLowerCase();
+  } catch {
+    return normalized.toLowerCase().replace(/\/$/, "");
+  }
+}
+
+function normalizeTitleKey(title: string): string {
+  return decodeEntities(title || "")
+    .toLowerCase()
+    .replace(/[\u0640]/g, "")
+    .replace(/["'“”‘’`´]/g, "")
+    .replace(/[\u061f؟!.,:;()\-_/\\|\[\]{}]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -47,8 +97,8 @@ function stripHtml(html: string): string {
 }
 
 function normalizeImageUrl(url: string): string {
+  url = normalizeUrl(url);
   if (!url) return url;
-  url = url.replace(/&amp;/g, "&");
   if (url.includes("pbs.twimg.com")) {
     url = url.replace(/name=\w+/, "name=orig");
     if (!url.includes("name=")) url += (url.includes("?") ? "&" : "?") + "name=orig";
@@ -56,17 +106,74 @@ function normalizeImageUrl(url: string): string {
   return url;
 }
 
-function extractVideoUrl(html: string): string | null {
-  if (!html) return null;
-  const videoMatch = html.match(/<video[^>]+src=["']([^"']+)["']/i)
-    || html.match(/<source[^>]+src=["']([^"']*\.(?:mp4|webm|mov|m3u8)[^"']*)["']/i);
-  return videoMatch ? videoMatch[1] : null;
+function normalizeVideoUrl(url: string): string {
+  return normalizeUrl(url);
 }
 
-function parseRSSItems(xml: string): Array<{
-  title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
-}> {
-  const items: any[] = [];
+function dedupeUrls(urls: string[]) {
+  return [...new Set(urls.filter(Boolean))];
+}
+
+function extractMedia(html: string) {
+  if (!html) return null;
+
+  const imageMatches = [
+    ...Array.from(html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi)).map((m) => normalizeImageUrl(m[1])),
+    ...Array.from(html.matchAll(/(?:https?:)?\/\/pbs\.twimg\.com\/[^\s"'<>]+/gi)).map((m) => normalizeImageUrl(m[0])),
+  ];
+
+  const videoMatches = [
+    ...Array.from(html.matchAll(/<video[^>]+src=["']([^"']+)["']/gi)).map((m) => normalizeVideoUrl(m[1])),
+    ...Array.from(html.matchAll(/<source[^>]+src=["']([^"']+)["']/gi)).map((m) => normalizeVideoUrl(m[1])),
+    ...Array.from(html.matchAll(/(?:https?:)?\/\/video\.twimg\.com\/[^\s"'<>]+/gi)).map((m) => normalizeVideoUrl(m[0])),
+    ...Array.from(html.matchAll(/(?:https?:)?\/\/[^\s"'<>]+\.(?:mp4|webm|mov|m3u8)(?:\?[^\s"'<>]*)?/gi)).map((m) => normalizeVideoUrl(m[0])),
+  ];
+
+  return {
+    images: dedupeUrls(imageMatches),
+    videos: dedupeUrls(videoMatches),
+  };
+}
+
+function extractEnclosureMedia(itemXml: string) {
+  const images: string[] = [];
+  const videos: string[] = [];
+
+  for (const match of itemXml.matchAll(/<enclosure[^>]*url=["']([^"']+)["'][^>]*?(?:type=["']([^"']+)["'])?[^>]*>/gi)) {
+    const url = normalizeUrl(match[1]);
+    const type = (match[2] || "").toLowerCase();
+    if (!url) continue;
+
+    if (type.startsWith("video/") || /\.(mp4|webm|mov|m3u8)(\?|$)/i.test(url)) {
+      videos.push(normalizeVideoUrl(url));
+    } else if (type.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|avif)(\?|$)/i.test(url) || url.includes("pbs.twimg.com")) {
+      images.push(normalizeImageUrl(url));
+    }
+  }
+
+  for (const match of itemXml.matchAll(/<media:content[^>]*url=["']([^"']+)["'][^>]*?(?:medium|type)=["']([^"']+)["']?[^>]*>/gi)) {
+    const url = normalizeUrl(match[1]);
+    const kind = (match[2] || "").toLowerCase();
+    if (!url) continue;
+
+    if (kind.includes("video")) videos.push(normalizeVideoUrl(url));
+    else images.push(normalizeImageUrl(url));
+  }
+
+  for (const match of itemXml.matchAll(/<media:thumbnail[^>]*url=["']([^"']+)["']/gi)) {
+    const url = normalizeImageUrl(match[1]);
+    if (url) images.push(url);
+  }
+
+  return { images: dedupeUrls(images), videos: dedupeUrls(videos) };
+}
+
+function buildPlainText(html: string): string {
+  return decodeEntities(stripHtml(html || "")).substring(0, 500);
+}
+
+function parseRSSItems(xml: string): ParsedFeedItem[] {
+  const items: ParsedFeedItem[] = [];
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -76,35 +183,21 @@ function parseRSSItems(xml: string): Array<{
       return m ? (m[1] || m[2] || "").trim() : "";
     };
     const title = decodeEntities(getTag("title"));
-    const link = getTag("link");
+    const link = normalizeUrl(getTag("link"));
     const rawDesc = getTag("description");
-    const description = decodeEntities(stripHtml(rawDesc)).substring(0, 500);
+    const description = buildPlainText(rawDesc);
     const pubDate = getTag("pubDate");
     const contentEncoded = getTag("content:encoded");
-    const content = contentEncoded ? decodeEntities(stripHtml(contentEncoded)) : null;
+    const rawContent = decodeEntities(contentEncoded || rawDesc || "").trim();
 
-    let imageUrl: string | null = null;
-    const enclosureMatch = c.match(/url="([^"]*\.(jpg|jpeg|png|gif|webp)[^"]*)"/i);
-    if (enclosureMatch) imageUrl = normalizeImageUrl(enclosureMatch[1]);
-    if (!imageUrl) {
-      const mediaMatch = c.match(/<media:content[^>]*url="([^"]*)"/i);
-      if (mediaMatch) imageUrl = normalizeImageUrl(mediaMatch[1]);
-    }
-    if (!imageUrl) {
-      const mediaThumbnail = c.match(/<media:thumbnail[^>]*url="([^"]*)"/i);
-      if (mediaThumbnail) imageUrl = normalizeImageUrl(mediaThumbnail[1]);
-    }
-    if (!imageUrl) {
-      const imgMatch = rawDesc.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
-    }
-    if (!imageUrl && contentEncoded) {
-      const imgMatch = contentEncoded.match(/<img[^>]*src="([^"]*)"/i);
-      if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
-    }
-
-    // Extract video from content
-    const videoUrl = extractVideoUrl(rawDesc) || extractVideoUrl(contentEncoded) || null;
+    const descMedia = extractMedia(rawDesc) || { images: [], videos: [] };
+    const contentMedia = extractMedia(contentEncoded) || { images: [], videos: [] };
+    const enclosureMedia = extractEnclosureMedia(c);
+    const allImages = dedupeUrls([...enclosureMedia.images, ...contentMedia.images, ...descMedia.images]);
+    const allVideos = dedupeUrls([...enclosureMedia.videos, ...contentMedia.videos, ...descMedia.videos]);
+    const imageUrl = allImages[0] || null;
+    const videoUrl = allVideos[0] || null;
+    const content = rawContent || null;
 
     if (title && link) {
       items.push({ title, link, description, pubDate, imageUrl, content, videoUrl });
@@ -116,7 +209,7 @@ function parseRSSItems(xml: string): Array<{
 function parseAtomItems(xml: string): Array<{
   title: string; link: string; description: string; pubDate: string; imageUrl: string | null; content: string | null; videoUrl: string | null;
 }> {
-  const items: any[] = [];
+  const items: ParsedFeedItem[] = [];
   const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
   let match;
   while ((match = entryRegex.exec(xml)) !== null) {
@@ -127,18 +220,15 @@ function parseAtomItems(xml: string): Array<{
     };
     const title = decodeEntities(getTag("title"));
     const linkMatch = c.match(/<link[^>]*href="([^"]*)"/i);
-    const link = linkMatch ? linkMatch[1] : "";
+    const link = linkMatch ? normalizeUrl(linkMatch[1]) : "";
     const summary = getTag("summary");
     const contentTag = getTag("content");
     const updated = getTag("updated") || getTag("published");
-    const description = decodeEntities(stripHtml(summary || contentTag)).substring(0, 500);
-    const content = contentTag ? decodeEntities(stripHtml(contentTag)) : null;
-
-    let imageUrl: string | null = null;
-    const imgMatch = (contentTag || summary).match(/<img[^>]*src="([^"]*)"/i);
-    if (imgMatch) imageUrl = normalizeImageUrl(imgMatch[1]);
-
-    const videoUrl = extractVideoUrl(contentTag) || extractVideoUrl(summary) || null;
+    const description = buildPlainText(summary || contentTag);
+    const content = decodeEntities(contentTag || summary || "").trim() || null;
+    const media = extractMedia(`${summary || ""}\n${contentTag || ""}`) || { images: [], videos: [] };
+    const imageUrl = media.images[0] || null;
+    const videoUrl = media.videos[0] || null;
 
     if (title && link) {
       items.push({ title, link, description, pubDate: updated, imageUrl, content, videoUrl });
@@ -166,38 +256,123 @@ async function tryWordPressAPI(baseUrl: string) {
 
     return posts.map((p: any) => ({
       title: decodeEntities(stripHtml(p.title?.rendered || "")),
-      link: p.link || "",
+      link: normalizeUrl(p.link || ""),
       description: decodeEntities(stripHtml(p.excerpt?.rendered || "")).substring(0, 500),
-      content: decodeEntities(stripHtml(p.content?.rendered || "")),
+      content: decodeEntities(p.content?.rendered || "") || null,
       pubDate: p.date || new Date().toISOString(),
-      imageUrl: p._embedded?.["wp:featuredmedia"]?.[0]?.source_url || null,
+      imageUrl: p._embedded?.["wp:featuredmedia"]?.[0]?.source_url || extractMedia(p.content?.rendered || "")?.images?.[0] || null,
+      videoUrl: extractMedia(p.content?.rendered || "")?.videos?.[0] || null,
     }));
   } catch {
     return null;
   }
 }
 
-function categorize(title: string, desc: string, lang: string): string {
-  const text = `${title} ${desc}`.toLowerCase();
+function categorize(title: string, desc: string, lang: string, sourceName = ""): string {
+  const text = `${title} ${desc} ${sourceName}`.toLowerCase();
   if (lang === "AR") {
+    if (/رياضة|رياضي|مباراة|مباريات|كرة|دوري|بطولة|كأس|منتخب|نادي|هدف|أهداف|مدرب|لاعب|لاعبين|الهلال|النصر|الاتحاد|الأهلي|برشلونة|ريال مدريد|تشيلسي|ليفربول|مانشستر|رونالدو|ميسي|الانتقالات/.test(text)) return "رياضة";
     if (/يمن|صنعاء|عدن|مأرب|تعز|حضرموت/.test(text)) return "محلي";
     if (/عرب|سعود|إمارات|مصر|خليج|لبنان|سوري|عراق|أردن/.test(text)) return "عربي";
     if (/سياس|حكوم|رئيس|برلمان|انتخاب|دول/.test(text)) return "دولي";
     if (/اقتصاد|مال|بورصة|نفط|دولار|ريال|ذهب|أسعار/.test(text)) return "اقتصاد";
-    if (/رياض|كرة|منتخب|دوري|بطولة|لاعب/.test(text)) return "رياضة";
     if (/تكنولوج|تقن|ذكاء|هاتف|تطبيق|إنترنت/.test(text)) return "تكنولوجيا";
     if (/صح|طب|مرض|علاج|فيروس|لقاح/.test(text)) return "صحة";
     if (/فن|سينما|مسرح|موسيق|ثقاف/.test(text)) return "فنون";
     return "محلي";
   } else {
+    if (/sport|football|soccer|basketball|tennis|formula|fifa|uefa|championship|match|goal|club|coach|player|transfer|premier league|la liga|serie a|nba/.test(text)) return "Sports";
     if (/politic|government|president|election|parliament|congress|world|global/.test(text)) return "World";
     if (/econom|financ|market|stock|oil|gold|trade|inflation/.test(text)) return "Economy";
-    if (/sport|football|soccer|basketball|olympic|championship|player/.test(text)) return "Sports";
     if (/tech|ai|artificial|software|app|internet|cyber|digital/.test(text)) return "Technology";
     if (/health|medic|disease|vaccine|treatment|hospital/.test(text)) return "Health";
     if (/art|cinema|theater|music|culture|entertain/.test(text)) return "Arts";
     return "World";
   }
+}
+
+async function loadExistingFingerprints(supabase: ReturnType<typeof createClient>) {
+  const titleKeys = new Set<string>();
+  const urlKeys = new Set<string>();
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("title, url")
+      .range(from, from + pageSize - 1);
+
+    if (error || !data || data.length === 0) break;
+
+    for (const article of data) {
+      const titleKey = normalizeTitleKey(article.title || "");
+      const urlKey = normalizeUrlKey(article.url || "");
+      if (titleKey) titleKeys.add(titleKey);
+      if (urlKey) urlKeys.add(urlKey);
+    }
+
+    if (data.length < pageSize) break;
+  }
+
+  return { titleKeys, urlKeys };
+}
+
+async function cleanupDuplicates(supabase: ReturnType<typeof createClient>) {
+  const rows: Array<{ id: string; title: string; url: string; published_at: string | null; created_at: string | null }> = [];
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("id, title, url, published_at, created_at")
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  rows.sort((a, b) => {
+    const aTime = new Date(a.published_at || a.created_at || 0).getTime();
+    const bTime = new Date(b.published_at || b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+
+  const seenTitleKeys = new Set<string>();
+  const seenUrlKeys = new Set<string>();
+  const duplicateGroupKeys = new Set<string>();
+  const idsToDelete = new Set<string>();
+
+  for (const row of rows) {
+    const titleKey = normalizeTitleKey(row.title || "");
+    const urlKey = normalizeUrlKey(row.url || "");
+    const titleDup = titleKey && seenTitleKeys.has(titleKey);
+    const urlDup = urlKey && seenUrlKeys.has(urlKey);
+
+    if (titleDup || urlDup) {
+      idsToDelete.add(row.id);
+      if (titleDup) duplicateGroupKeys.add(`title:${titleKey}`);
+      if (urlDup) duplicateGroupKeys.add(`url:${urlKey}`);
+      continue;
+    }
+
+    if (titleKey) seenTitleKeys.add(titleKey);
+    if (urlKey) seenUrlKeys.add(urlKey);
+  }
+
+  const ids = [...idsToDelete];
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { error } = await supabase.from("articles").delete().in("id", chunk);
+    if (error) throw error;
+  }
+
+  return {
+    removedCount: ids.length,
+    duplicateGroups: duplicateGroupKeys.size,
+  };
 }
 
 serve(async (req) => {
@@ -211,6 +386,17 @@ serve(async (req) => {
     let body: any = {};
     try { body = await req.json(); } catch {}
     const targetSourceId = body?.source_id;
+    const action = body?.action;
+
+    if (action === "cleanup_duplicates") {
+      const cleanup = await cleanupDuplicates(supabase);
+      return new Response(JSON.stringify({
+        message: `Removed ${cleanup.removedCount} duplicate articles`,
+        ...cleanup,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let query = supabase.from("news_sources").select("*").eq("is_active", true);
     if (targetSourceId) query = supabase.from("news_sources").select("*").eq("id", targetSourceId);
@@ -224,6 +410,7 @@ serve(async (req) => {
 
     let totalInserted = 0;
     const logs: string[] = [];
+    const existingFingerprints = await loadExistingFingerprints(supabase);
 
     for (const source of sources) {
       try {
@@ -233,7 +420,7 @@ serve(async (req) => {
         // Method 1: Try RSS/Atom feed
         try {
           const res = await fetch(source.url, {
-            headers: { "User-Agent": "EramNews/2.0" },
+            headers: REQUEST_HEADERS,
             signal: AbortSignal.timeout(15000),
           });
           if (res.ok) {
@@ -273,25 +460,32 @@ serve(async (req) => {
         // Limit to last 30 articles
         items = items.slice(0, 30);
         let sourceInserted = 0;
+        let sourceSkipped = 0;
 
         for (const item of items) {
-          const hash = hashString(item.title + item.link);
-          
-          // Check for existing article with same title (dedup by title)
-          const { data: existing } = await supabase.from("articles")
-            .select("id").eq("title", item.title).limit(1);
-          if (existing && existing.length > 0) continue;
-          
+          const titleKey = normalizeTitleKey(item.title);
+          const urlKey = normalizeUrlKey(item.link);
+          if (!titleKey || !urlKey) {
+            sourceSkipped++;
+            continue;
+          }
+
+          if (existingFingerprints.titleKeys.has(titleKey) || existingFingerprints.urlKeys.has(urlKey)) {
+            sourceSkipped++;
+            continue;
+          }
+
+          const hash = hashString(`${titleKey}|${urlKey}`);
           const category = source.category && source.category !== "none"
             ? source.category
-            : categorize(item.title, item.description, source.language);
+            : categorize(item.title, item.description, source.language, source.name);
 
           // Try to fetch og:image if no image found
           let finalImage = item.imageUrl;
           if (!finalImage && item.link) {
             try {
               const pageRes = await fetch(item.link, {
-                headers: { "User-Agent": "EramNews/2.0" },
+                headers: REQUEST_HEADERS,
                 signal: AbortSignal.timeout(8000),
               });
               if (pageRes.ok) {
@@ -304,6 +498,7 @@ serve(async (req) => {
           }
 
           if (finalImage) finalImage = normalizeImageUrl(finalImage);
+          const finalVideo = item.videoUrl ? normalizeVideoUrl(item.videoUrl) : null;
 
           const { error } = await supabase.from("articles").upsert({
             source_id: source.id,
@@ -312,17 +507,21 @@ serve(async (req) => {
             content: item.content || null,
             url: item.link,
             image_url: finalImage,
-            video_url: item.videoUrl || null,
+            video_url: finalVideo,
             category,
             language: source.language,
             published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
             hash,
           }, { onConflict: "hash" });
 
-          if (!error) sourceInserted++;
+          if (!error) {
+            sourceInserted++;
+            existingFingerprints.titleKeys.add(titleKey);
+            existingFingerprints.urlKeys.add(urlKey);
+          }
         }
 
-        logs.push(`${source.name}: ${sourceInserted} articles via ${method}`);
+        logs.push(`${source.name}: ${sourceInserted} articles via ${method}${sourceSkipped ? `, skipped ${sourceSkipped} duplicates` : ""}`);
 
         await supabase.from("news_sources").update({
           last_fetch: new Date().toISOString(),

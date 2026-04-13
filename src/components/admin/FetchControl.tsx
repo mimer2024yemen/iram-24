@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, CheckCircle } from "lucide-react";
+import { RefreshCw, CheckCircle, Broom } from "lucide-react";
 
 const FetchControl = () => {
   const [settings, setSettings] = useState<any>(null);
   const [fetching, setFetching] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   const loadSettings = async () => {
@@ -31,6 +32,26 @@ const FetchControl = () => {
     loadSettings();
   };
 
+  const handleCleanupDuplicates = async () => {
+    setCleaning(true);
+    setResult(null);
+    try {
+      const res = await supabase.functions.invoke("fetch-news", {
+        body: { action: "cleanup_duplicates" },
+      });
+
+      if (res.data) {
+        setResult(`تم حذف ${res.data.removedCount || 0} خبر مكرر ضمن ${res.data.duplicateGroups || 0} مجموعة`);
+      } else {
+        setResult("تعذر تنظيف الأخبار المكررة");
+      }
+    } catch {
+      setResult("تعذر تنظيف الأخبار المكررة");
+    }
+    setCleaning(false);
+    loadSettings();
+  };
+
   if (!settings) return <p className="text-muted-foreground text-sm">جاري التحميل...</p>;
 
   return (
@@ -47,6 +68,15 @@ const FetchControl = () => {
           className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-bold disabled:opacity-50">
           <RefreshCw size={16} className={fetching ? "animate-spin" : ""} />
           {fetching ? "جاري الجلب..." : "جلب يدوي الآن"}
+        </button>
+
+        <button
+          onClick={handleCleanupDuplicates}
+          disabled={cleaning}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-card text-foreground rounded-lg text-sm font-bold border border-border disabled:opacity-50"
+        >
+          <Broom size={16} className={cleaning ? "animate-pulse" : ""} />
+          {cleaning ? "جاري فحص وتنظيف المكرر..." : "تنظيف الأخبار المكررة"}
         </button>
 
         {result && (

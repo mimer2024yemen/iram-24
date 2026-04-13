@@ -15,6 +15,7 @@ const BLOCKED_DOMAINS = [
   "almashhadalaraby.com",
   "yemenipress.net",
   "newsyemen.net",
+  "pbs.twimg.com",
 ];
 
 function needsProxy(url: string): boolean {
