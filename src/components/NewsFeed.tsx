@@ -2,20 +2,19 @@ import { useState, useEffect, useMemo } from "react";
 import { useArticles } from "@/hooks/useArticles";
 import { AR_CATEGORIES, EN_CATEGORIES } from "@/lib/newsUtils";
 import BreakingNewsBar from "@/components/BreakingNewsBar";
-import Header from "@/components/Header";
 import TickerBar from "@/components/TickerBar";
-import CategoriesNav from "@/components/CategoriesNav";
-import NewsCard from "@/components/NewsCard";
 import BottomNav from "@/components/BottomNav";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SearchOverlay from "@/components/SearchOverlay";
 import ManualArticlesSection from "@/components/ManualArticlesSection";
 import Sidebar from "@/components/Sidebar";
-import HeroSection from "@/components/home/HeroSection";
-import LatestStrip from "@/components/home/LatestStrip";
-import CategorySection from "@/components/home/CategorySection";
-import SectionHeader from "@/components/home/SectionHeader";
-import { ChevronLeft, ChevronRight, Trophy, Globe, TrendingUp, Cpu, Heart, Flame } from "lucide-react";
+import EditorialMasthead from "@/components/home/EditorialMasthead";
+import EditorialNav from "@/components/home/EditorialNav";
+import EditorialHero from "@/components/home/EditorialHero";
+import EditorialSection from "@/components/home/EditorialSection";
+import LiveTicker from "@/components/home/LiveTicker";
+import NewsCard from "@/components/NewsCard";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 30;
@@ -31,13 +30,11 @@ const NewsFeed = () => {
     }
   }, []);
 
-  const saveScrollPos = () => {
-    sessionStorage.setItem("eram_feed_scroll", String(window.scrollY));
-  };
+  const saveScroll = () => sessionStorage.setItem("eram_feed_scroll", String(window.scrollY));
 
-  const [language, setLanguage] = useState<"AR" | "EN">(() => {
-    return (localStorage.getItem("eram_lang") as "AR" | "EN") || "AR";
-  });
+  const [language, setLanguage] = useState<"AR" | "EN">(
+    () => (localStorage.getItem("eram_lang") as "AR" | "EN") || "AR"
+  );
   const categories = language === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
   const [activeCategory, setActiveCategory] = useState(categories[0]);
 
@@ -51,8 +48,7 @@ const NewsFeed = () => {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const isHome = activeCategory === "الرئيسية" || activeCategory === "Home";
-  // Fetch wider pool on home for hero/sections
-  const fetchLimit = isHome && page === 1 ? 80 : PAGE_SIZE + 1;
+  const fetchLimit = isHome && page === 1 ? 100 : PAGE_SIZE + 1;
   const { articles, loading } = useArticles(language, activeCategory, page * fetchLimit);
 
   const startIdx = (page - 1) * PAGE_SIZE;
@@ -61,87 +57,81 @@ const NewsFeed = () => {
   const totalEstimated = articles.length;
   const isRTL = language === "AR";
 
-  // Build category buckets for home layout
   const buckets = useMemo(() => {
-    const map: Record<string, typeof articles> = {};
-    for (const a of articles) {
-      if (!map[a.category]) map[a.category] = [];
-      map[a.category].push(a);
-    }
-    return map;
+    const m: Record<string, typeof articles> = {};
+    for (const a of articles) (m[a.category] ||= []).push(a);
+    return m;
   }, [articles]);
 
-  const handleLanguageChange = (lang: "AR" | "EN") => {
-    setLanguage(lang);
-    localStorage.setItem("eram_lang", lang);
-    const cats = lang === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
+  const onLang = (l: "AR" | "EN") => {
+    setLanguage(l);
+    localStorage.setItem("eram_lang", l);
+    const cats = l === "AR" ? AR_CATEGORIES : EN_CATEGORIES;
     setActiveCategory(cats[0]);
     setSearchParams({ page: "1" }, { replace: true });
   };
-
-  const handleCategorySelect = (cat: string) => {
-    setActiveCategory(cat);
+  const onCat = (c: string) => {
+    setActiveCategory(c);
     setSearchParams({ page: "1" }, { replace: true });
   };
 
   const Skeleton = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2 animate-pulse rounded-2xl bg-card aspect-[16/9]" />
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-          <div className="animate-pulse rounded-xl bg-card aspect-[16/9]" />
-          <div className="animate-pulse rounded-xl bg-card aspect-[16/9]" />
+    <div className="space-y-8 py-8">
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-8">
+          <div className="aspect-[16/9] bg-foreground/5 animate-pulse mb-4" />
+          <div className="h-12 bg-foreground/5 animate-pulse w-3/4" />
         </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="animate-pulse rounded-lg bg-card aspect-[16/12]" />
-        ))}
+        <div className="col-span-12 lg:col-span-4 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-3">
+              <div className="w-24 h-20 bg-foreground/5 animate-pulse" />
+              <div className="flex-1 h-16 bg-foreground/5 animate-pulse" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 
-  // Pagination
   const totalPages = Math.max(Math.ceil(totalEstimated / PAGE_SIZE), page + (hasMore ? 1 : 0));
   const renderPagination = () => {
     const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
+    if (totalPages <= 7) for (let i = 1; i <= totalPages; i++) pages.push(i);
+    else {
       pages.push(1);
       if (page > 3) pages.push("...");
       for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
       if (page < totalPages - 2) pages.push("...");
       pages.push(totalPages);
     }
-
     return (
-      <div className="mt-8 mb-4">
-        <p className="text-center text-muted-foreground text-[10px] mb-2">
+      <div className="py-10 border-t border-foreground/15">
+        <p className="text-center text-muted-foreground text-[10px] tracking-[0.2em] uppercase mb-4">
           {isRTL
-            ? `عرض ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} من ${totalEstimated}+ نتيجة`
-            : `Showing ${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, totalEstimated)} of ${totalEstimated}+ results`}
+            ? `صفحة ${page} من ${totalPages}`
+            : `Page ${page} of ${totalPages}`}
         </p>
         <div className="flex items-center justify-center gap-1" dir={isRTL ? "rtl" : "ltr"}>
           <button
             onClick={() => setPage(page - 1)}
             disabled={page === 1}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border"
+            className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider disabled:opacity-30 hover:text-primary flex items-center gap-1"
           >
             <ChevronRight size={14} />
-            <span className="hidden sm:inline">{isRTL ? "السابق" : "Previous"}</span>
+            {isRTL ? "السابق" : "Prev"}
           </button>
           {pages.map((p, i) =>
             p === "..." ? (
-              <span key={`e${i}`} className="w-7 h-7 flex items-center justify-center text-muted-foreground text-xs">…</span>
+              <span key={`e${i}`} className="w-8 text-center text-muted-foreground">…</span>
             ) : (
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
+                className={`w-9 h-9 font-display text-base transition-all ${
                   page === p
-                    ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                    : "bg-card text-foreground hover:bg-accent border border-border"
+                    ? "bg-foreground text-background"
+                    : "text-foreground hover:bg-foreground/10"
                 }`}
               >
                 {p}
@@ -151,9 +141,9 @@ const NewsFeed = () => {
           <button
             onClick={() => setPage(page + 1)}
             disabled={!hasMore}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border"
+            className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider disabled:opacity-30 hover:text-primary flex items-center gap-1"
           >
-            <span className="hidden sm:inline">{isRTL ? "التالي" : "Next"}</span>
+            {isRTL ? "التالي" : "Next"}
             <ChevronLeft size={14} />
           </button>
         </div>
@@ -161,102 +151,124 @@ const NewsFeed = () => {
     );
   };
 
-  // Decide what sections to render on home
-  const renderHomeLayout = () => {
-    const top = articles.slice(0, 3);
-    const latest = articles.slice(3, 11);
-    // Most-viewed list
-    const mostViewed = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+  // HOME LAYOUT — Editorial Bold
+  const renderHome = () => {
+    const top = articles.slice(0, 4);
+    const live = articles.slice(0, 10);
 
-    // Pull category buckets, filtered to keep variety
     const sportsKey = isRTL ? "رياضة" : "Sports";
     const econKey = isRTL ? "اقتصاد" : "Economy";
     const techKey = isRTL ? "تكنولوجيا" : "Technology";
     const worldKey = isRTL ? "دولي" : "World";
     const healthKey = isRTL ? "صحة" : "Health";
+    const arabKey = isRTL ? "عربي" : "World";
+
+    const mostRead = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+    const recent = articles.slice(4, 24);
 
     return (
       <>
-        <HeroSection articles={top} language={language} onBeforeNavigate={saveScrollPos} />
-        <LatestStrip articles={latest} language={language} onBeforeNavigate={saveScrollPos} />
+        <EditorialHero articles={top} language={language} onBeforeNavigate={saveScroll} />
 
-        {/* World + Most read 2 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-2">
-          <div className="lg:col-span-2">
-            <CategorySection
-              title={isRTL ? "الأخبار العالمية" : "World News"}
-              articles={buckets[worldKey] || []}
+        {/* Two-column: World feature + Most Read list */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 border-b border-foreground/15">
+          <div className="lg:col-span-2 lg:border-l-0 lg:border-r-0">
+            <EditorialSection
+              title={isRTL ? "الشأن الدولي" : "World Affairs"}
+              subtitle={isRTL ? "تغطية شاملة" : "Coverage"}
+              number="01"
+              articles={buckets[worldKey] || buckets[arabKey] || []}
               language={language}
-              layout="magazine"
-              icon={<Globe size={16} />}
-              onMore={() => handleCategorySelect(worldKey)}
-              onBeforeNavigate={saveScrollPos}
+              variant="feature"
+              onMore={() => onCat(worldKey)}
+              onBeforeNavigate={saveScroll}
             />
           </div>
-          <div>
-            <CategorySection
-              title={isRTL ? "الأكثر قراءة" : "Most Read"}
-              articles={mostViewed}
+          <div className={`${isRTL ? "lg:border-r" : "lg:border-l"} border-foreground/15 lg:pl-6 lg:pr-6`}>
+            <EditorialSection
+              title={isRTL ? "الأكثر قراءةً" : "Most Read"}
+              subtitle={isRTL ? "اختيار القراء" : "Top picks"}
+              number="✦"
+              articles={mostRead}
               language={language}
-              layout="list"
-              icon={<Flame size={16} />}
-              onBeforeNavigate={saveScrollPos}
+              variant="list"
+              onBeforeNavigate={saveScroll}
             />
           </div>
         </div>
 
-        <CategorySection
-          title={isRTL ? "اقتصاد ومال" : "Business & Finance"}
+        <EditorialSection
+          title={isRTL ? "اقتصاد وأعمال" : "Business & Markets"}
+          subtitle={isRTL ? "مال وأسواق" : "Finance"}
+          number="02"
           articles={buckets[econKey] || []}
           language={language}
-          layout="grid"
-          icon={<TrendingUp size={16} />}
-          onMore={() => handleCategorySelect(econKey)}
-          onBeforeNavigate={saveScrollPos}
+          variant="wide"
+          onMore={() => onCat(econKey)}
+          onBeforeNavigate={saveScroll}
         />
 
-        <CategorySection
-          title={isRTL ? "رياضة" : "Sports"}
+        <EditorialSection
+          title={isRTL ? "الرياضة" : "Sports"}
+          subtitle={isRTL ? "ميادين وأبطال" : "Game on"}
+          number="03"
           articles={buckets[sportsKey] || []}
           language={language}
-          layout="magazine"
-          icon={<Trophy size={16} />}
-          onMore={() => handleCategorySelect(sportsKey)}
-          onBeforeNavigate={saveScrollPos}
+          variant="feature"
+          onMore={() => onCat(sportsKey)}
+          onBeforeNavigate={saveScroll}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-2">
-          <CategorySection
-            title={isRTL ? "تكنولوجيا" : "Technology"}
-            articles={buckets[techKey] || []}
-            language={language}
-            layout="grid"
-            icon={<Cpu size={16} />}
-            onMore={() => handleCategorySelect(techKey)}
-            onBeforeNavigate={saveScrollPos}
-          />
-          <CategorySection
-            title={isRTL ? "صحة" : "Health"}
-            articles={buckets[healthKey] || []}
-            language={language}
-            layout="grid"
-            icon={<Heart size={16} />}
-            onMore={() => handleCategorySelect(healthKey)}
-            onBeforeNavigate={saveScrollPos}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <div className={`${isRTL ? "md:border-l" : "md:border-r"} border-foreground/15 md:pr-6 md:pl-6`}>
+            <EditorialSection
+              title={isRTL ? "تكنولوجيا" : "Technology"}
+              subtitle={isRTL ? "ابتكار" : "Innovation"}
+              number="04"
+              articles={buckets[techKey] || []}
+              language={language}
+              variant="trio"
+              onMore={() => onCat(techKey)}
+              onBeforeNavigate={saveScroll}
+            />
+          </div>
+          <div className="md:pl-6 md:pr-6">
+            <EditorialSection
+              title={isRTL ? "صحة" : "Health"}
+              subtitle={isRTL ? "علم وحياة" : "Wellness"}
+              number="05"
+              articles={buckets[healthKey] || []}
+              language={language}
+              variant="trio"
+              onMore={() => onCat(healthKey)}
+              onBeforeNavigate={saveScroll}
+            />
+          </div>
         </div>
 
-        {/* All recent grid */}
-        <section className="mt-4">
-          <SectionHeader title={isRTL ? "أحدث الأخبار" : "Recent News"} language={language} />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {articles.slice(11, 31).map((article) => (
+        {/* Recent grid */}
+        <section className="py-8">
+          <div className="flex items-end justify-between mb-5 pb-3 border-b-2 border-foreground">
+            <div className="flex items-end gap-4">
+              <span className="section-num">06</span>
+              <div>
+                <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[hsl(var(--gold))] block mb-1">
+                  {isRTL ? "تحديثات" : "Updates"}
+                </span>
+                <h2 className="font-display text-2xl md:text-3xl text-foreground leading-none">
+                  {isRTL ? "أحدث المنشورات" : "Latest Stories"}
+                </h2>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7">
+            {recent.map((a) => (
               <NewsCard
-                key={article.id}
-                article={article}
+                key={a.id}
+                article={a}
                 language={language}
                 variant="medium"
-                onBeforeNavigate={saveScrollPos}
+                onBeforeNavigate={saveScroll}
               />
             ))}
           </div>
@@ -268,43 +280,64 @@ const NewsFeed = () => {
   return (
     <div className="min-h-screen bg-background pb-16 overflow-x-hidden" dir={isRTL ? "rtl" : "ltr"}>
       {showSearch && <SearchOverlay language={language} onClose={() => setShowSearch(false)} />}
-      <Sidebar open={showSidebar} onClose={() => setShowSidebar(false)} language={language} onCategorySelect={handleCategorySelect} />
-
-      <Header
+      <Sidebar
+        open={showSidebar}
+        onClose={() => setShowSidebar(false)}
         language={language}
-        onLanguageChange={handleLanguageChange}
+        onCategorySelect={onCat}
+      />
+
+      <EditorialMasthead
+        language={language}
+        onLanguageChange={onLang}
         onMenuToggle={() => setShowSidebar(true)}
         onSearchToggle={() => setShowSearch(true)}
       />
-      <BreakingNewsBar language={language} />
-      <TickerBar />
-      <CategoriesNav
+      <EditorialNav
         categories={categories}
-        activeCategory={activeCategory}
-        onSelect={handleCategorySelect}
+        active={activeCategory}
+        onSelect={onCat}
         language={language}
       />
+      {!loading && articles.length > 0 && isHome && page === 1 && (
+        <LiveTicker articles={articles.slice(0, 10)} language={language} onBeforeNavigate={saveScroll} />
+      )}
+      <BreakingNewsBar language={language} />
+      <TickerBar />
 
-      <main className="max-w-screen-xl mx-auto px-3 md:px-6 py-5" style={{ minHeight: "60vh" }}>
+      <main className="max-w-screen-xl mx-auto px-4 md:px-6" style={{ minHeight: "60vh" }}>
         {loading ? (
           <Skeleton />
         ) : pageArticles.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground text-sm">
-              {isRTL ? "لا توجد أخبار في هذا القسم حالياً" : "No news in this section yet"}
+          <div className="text-center py-24">
+            <p className="font-display text-3xl text-foreground/30">
+              {isRTL ? "لا توجد أخبار" : "No stories"}
             </p>
           </div>
         ) : isHome && page === 1 ? (
-          renderHomeLayout()
+          renderHome()
         ) : (
-          <>
-            <SectionHeader title={activeCategory} language={language} />
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {pageArticles.map((article) => (
-                <NewsCard key={article.id} article={article} language={language} variant="medium" onBeforeNavigate={saveScrollPos} />
+          <section className="py-8">
+            <div className="flex items-end justify-between mb-5 pb-3 border-b-2 border-foreground">
+              <h2 className="font-display text-3xl md:text-4xl text-foreground leading-none">
+                {activeCategory}
+              </h2>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {totalEstimated}+ {isRTL ? "قصة" : "stories"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7">
+              {pageArticles.map((a) => (
+                <NewsCard
+                  key={a.id}
+                  article={a}
+                  language={language}
+                  variant="medium"
+                  onBeforeNavigate={saveScroll}
+                />
               ))}
             </div>
-          </>
+          </section>
         )}
 
         {!loading && pageArticles.length > 0 && !(isHome && page === 1) && renderPagination()}

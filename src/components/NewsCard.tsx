@@ -73,27 +73,45 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
     );
   }
 
-  // Medium card
+  // Medium card — Editorial style
   if (variant === "medium") {
     return (
-      <div className="rounded-lg overflow-hidden cursor-pointer group bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col h-full" onClick={goToArticle} dir={language === "AR" ? "rtl" : "ltr"}>
+      <div
+        className="cursor-pointer group flex flex-col h-full"
+        onClick={goToArticle}
+        dir={language === "AR" ? "rtl" : "ltr"}
+      >
         {hasImage ? (
-          <div className="aspect-[16/8] w-full overflow-hidden">
-            <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={() => setImgError(true)} />
+          <div className="aspect-[4/3] w-full overflow-hidden bg-foreground/5 mb-2">
+            <LazyImage
+              src={imgSrc}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              onError={() => setImgError(true)}
+            />
           </div>
-        ) : null}
-        <div className="p-2 flex flex-col flex-1">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-primary text-[9px] font-bold">{article.category}</span>
-            <span className="text-muted-foreground text-[9px]">{timeAgo(article.published_at, language)}</span>
+        ) : (
+          <div className="aspect-[4/3] w-full bg-foreground/5 flex items-center justify-center mb-2">
+            <span className="font-display text-2xl text-foreground/20">·</span>
           </div>
-          <h3 className="text-foreground font-bold text-xs leading-snug line-clamp-2 mb-0.5 flex-1">{title}</h3>
-          <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-border">
-            {article.author_name ? <span className="text-muted-foreground text-[9px] truncate max-w-[60%]">{article.author_name}</span> : <span />}
-            <div className="flex items-center gap-1.5">
-              <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors"><Share2 size={11} /></button>
-              <button onClick={handleFav} className="transition-transform active:scale-110"><Heart size={11} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} /></button>
-            </div>
+        )}
+        <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">
+          {article.category}
+        </span>
+        <h3 className="font-display text-sm md:text-base text-foreground leading-tight line-clamp-3 mt-1 group-hover:text-primary transition-colors flex-1">
+          {title}
+        </h3>
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-foreground/10">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            {timeAgo(article.published_at, language)}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
+              <Share2 size={11} />
+            </button>
+            <button onClick={handleFav} className="transition-transform active:scale-110">
+              <Heart size={11} className={isFav ? "fill-primary text-primary" : "text-muted-foreground"} />
+            </button>
           </div>
         </div>
       </div>
