@@ -77,6 +77,9 @@
     --ticker-bg: 220 14% 95%;
     --live-pulse: 346 84% 46%;
     --gold: 45 93% 48%;
+    --ink: 0 0% 6%;
+    --paper: 40 25% 97%;
+    --rule: 0 0% 80%;
   }
 }
 
@@ -154,4 +157,25 @@
 
 .animate-pulse-live {
   animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.font-display {
+  font-family: 'Noto Serif Display', 'Playfair Display', 'IBM Plex Sans Arabic', serif;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.editorial-rule {
+  background: repeating-linear-gradient(90deg, hsl(var(--gold)) 0 24px, transparent 24px 32px);
+  height: 3px;
+}
+
+.section-num {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 4rem;
+  line-height: 0.8;
+  color: hsl(var(--gold));
+  opacity: 0.85;
 }
