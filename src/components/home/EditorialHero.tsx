@@ -11,55 +11,44 @@ interface Props {
   onBeforeNavigate?: () => void;
 }
 
+const hasImg = (a: Article) => !!(a.image_url && a.image_url.trim());
+
 const EditorialHero = ({ articles, language, onBeforeNavigate }: Props) => {
   const navigate = useNavigate();
   if (articles.length === 0) return null;
   const isRTL = language === "AR";
 
   const lead = articles[0];
-  const sub1 = articles[1];
-  const sub2 = articles[2];
-  const sub3 = articles[3];
+  const subs = [articles[1], articles[2], articles[3]].filter(Boolean);
 
   const go = (id: string) => {
     onBeforeNavigate?.();
     navigate(`/article/${id}`);
   };
 
-  const renderImg = (a: Article, eager = false) => {
-    const raw = a.image_url?.trim();
-    if (!raw) {
-      return (
-        <div className="w-full h-full bg-foreground/5 flex items-center justify-center">
-          <span className="font-display text-5xl text-foreground/20">
-            {isRTL ? "إيرام" : "ERAM"}
-          </span>
-        </div>
-      );
-    }
-    return (
-      <LazyImage
-        src={proxyImageUrl(normalizeImageUrl(raw))}
-        alt={decodeHtmlEntities(a.title)}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-        loading={eager ? "eager" : "lazy"}
-      />
-    );
-  };
+  const renderImg = (a: Article, eager = false) => (
+    <LazyImage
+      src={proxyImageUrl(normalizeImageUrl(a.image_url!.trim()))}
+      alt={decodeHtmlEntities(a.title)}
+      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+      loading={eager ? "eager" : "lazy"}
+    />
+  );
 
   return (
     <section
       dir={isRTL ? "rtl" : "ltr"}
       className="grid grid-cols-12 gap-x-6 gap-y-8 py-8 border-b border-foreground/15"
     >
-      {/* MAIN LEAD — left big block */}
       <article
         onClick={() => go(lead.id)}
         className="col-span-12 lg:col-span-8 cursor-pointer group"
       >
-        <div className="aspect-[16/9] md:aspect-[16/8] overflow-hidden bg-foreground/5 mb-4">
-          {renderImg(lead, true)}
-        </div>
+        {hasImg(lead) && (
+          <div className="aspect-[16/9] md:aspect-[16/8] overflow-hidden bg-foreground/5 mb-4">
+            {renderImg(lead, true)}
+          </div>
+        )}
         <div className={isRTL ? "border-r-4 border-primary pr-4" : "border-l-4 border-primary pl-4"}>
           <div className="flex items-center gap-3 mb-2">
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary">
@@ -85,9 +74,8 @@ const EditorialHero = ({ articles, language, onBeforeNavigate }: Props) => {
         </div>
       </article>
 
-      {/* RIGHT COLUMN — 3 stacked stories with separators */}
       <aside className="col-span-12 lg:col-span-4 flex flex-col">
-        {[sub1, sub2, sub3].filter(Boolean).map((a, i) => (
+        {subs.map((a, i) => (
           <article
             key={a.id}
             onClick={() => go(a.id)}
@@ -96,9 +84,15 @@ const EditorialHero = ({ articles, language, onBeforeNavigate }: Props) => {
             } first:pt-0`}
           >
             <div className="flex gap-3">
-              <div className="w-24 h-20 md:w-28 md:h-24 shrink-0 overflow-hidden bg-foreground/5">
-                {renderImg(a)}
-              </div>
+              {hasImg(a) && (
+                <div className="w-24 h-20 md:w-28 md:h-24 shrink-0 overflow-hidden bg-foreground/5">
+                  <LazyImage
+                    src={proxyImageUrl(normalizeImageUrl(a.image_url!.trim()))}
+                    alt={decodeHtmlEntities(a.title)}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary block mb-1">
                   {a.category}
