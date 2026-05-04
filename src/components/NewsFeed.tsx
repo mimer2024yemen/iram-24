@@ -13,6 +13,7 @@ import EditorialNav from "@/components/home/EditorialNav";
 import EditorialHero from "@/components/home/EditorialHero";
 import EditorialSection from "@/components/home/EditorialSection";
 import LiveTicker from "@/components/home/LiveTicker";
+import SiteFooter from "@/components/home/SiteFooter";
 import NewsCard from "@/components/NewsCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -176,7 +177,6 @@ const NewsFeed = () => {
             <EditorialSection
               title={isRTL ? "الشأن الدولي" : "World Affairs"}
               subtitle={isRTL ? "تغطية شاملة" : "Coverage"}
-              number="01"
               articles={buckets[worldKey] || buckets[arabKey] || []}
               language={language}
               variant="feature"
@@ -188,7 +188,6 @@ const NewsFeed = () => {
             <EditorialSection
               title={isRTL ? "الأكثر قراءةً" : "Most Read"}
               subtitle={isRTL ? "اختيار القراء" : "Top picks"}
-              number="✦"
               articles={mostRead}
               language={language}
               variant="list"
@@ -200,7 +199,6 @@ const NewsFeed = () => {
         <EditorialSection
           title={isRTL ? "اقتصاد وأعمال" : "Business & Markets"}
           subtitle={isRTL ? "مال وأسواق" : "Finance"}
-          number="02"
           articles={buckets[econKey] || []}
           language={language}
           variant="wide"
@@ -211,7 +209,6 @@ const NewsFeed = () => {
         <EditorialSection
           title={isRTL ? "الرياضة" : "Sports"}
           subtitle={isRTL ? "ميادين وأبطال" : "Game on"}
-          number="03"
           articles={buckets[sportsKey] || []}
           language={language}
           variant="feature"
@@ -224,7 +221,6 @@ const NewsFeed = () => {
             <EditorialSection
               title={isRTL ? "تكنولوجيا" : "Technology"}
               subtitle={isRTL ? "ابتكار" : "Innovation"}
-              number="04"
               articles={buckets[techKey] || []}
               language={language}
               variant="trio"
@@ -236,7 +232,6 @@ const NewsFeed = () => {
             <EditorialSection
               title={isRTL ? "صحة" : "Health"}
               subtitle={isRTL ? "علم وحياة" : "Wellness"}
-              number="05"
               articles={buckets[healthKey] || []}
               language={language}
               variant="trio"
@@ -249,16 +244,13 @@ const NewsFeed = () => {
         {/* Recent grid */}
         <section className="py-8">
           <div className="flex items-end justify-between mb-5 pb-3 border-b-2 border-foreground">
-            <div className="flex items-end gap-4">
-              <span className="section-num">06</span>
-              <div>
-                <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[hsl(var(--gold))] block mb-1">
-                  {isRTL ? "تحديثات" : "Updates"}
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl text-foreground leading-none">
-                  {isRTL ? "أحدث المنشورات" : "Latest Stories"}
-                </h2>
-              </div>
+            <div>
+              <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[hsl(var(--gold))] block mb-1">
+                {isRTL ? "تحديثات" : "Updates"}
+              </span>
+              <h2 className="font-display text-2xl md:text-3xl text-foreground leading-none">
+                {isRTL ? "أحدث المنشورات" : "Latest Stories"}
+              </h2>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7">
@@ -344,6 +336,7 @@ const NewsFeed = () => {
       </main>
 
       <ManualArticlesSection language={language} />
+      <SiteFooter language={language} categories={categories} onCategorySelect={onCat} />
       <WhatsAppButton />
       <BottomNav />
     </div>
