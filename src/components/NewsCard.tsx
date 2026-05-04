@@ -81,7 +81,7 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
         onClick={goToArticle}
         dir={language === "AR" ? "rtl" : "ltr"}
       >
-        {hasImage ? (
+        {hasImage && (
           <div className="aspect-[4/3] w-full overflow-hidden bg-foreground/5 mb-2">
             <LazyImage
               src={imgSrc}
@@ -89,10 +89,6 @@ const NewsCard = ({ article, language, variant = "compact", onBeforeNavigate }: 
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
               onError={() => setImgError(true)}
             />
-          </div>
-        ) : (
-          <div className="aspect-[4/3] w-full bg-foreground/5 flex items-center justify-center mb-2">
-            <span className="font-display text-2xl text-foreground/20">·</span>
           </div>
         )}
         <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">

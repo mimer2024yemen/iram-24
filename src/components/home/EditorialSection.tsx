@@ -17,14 +17,11 @@ interface Props {
   onBeforeNavigate?: () => void;
 }
 
+const hasImg = (a: Article) => !!(a.image_url && a.image_url.trim());
+
 const Img = ({ a, className }: { a: Article; className?: string }) => {
   const raw = a.image_url?.trim();
-  if (!raw)
-    return (
-      <div className={`bg-foreground/5 flex items-center justify-center ${className || ""}`}>
-        <span className="font-display text-3xl text-foreground/20">·</span>
-      </div>
-    );
+  if (!raw) return null;
   return (
     <LazyImage
       src={proxyImageUrl(normalizeImageUrl(raw))}
@@ -37,7 +34,6 @@ const Img = ({ a, className }: { a: Article; className?: string }) => {
 const EditorialSection = ({
   title,
   subtitle,
-  number,
   articles,
   language,
   onMore,
@@ -57,18 +53,15 @@ const EditorialSection = ({
       className="flex items-end justify-between mb-5 pb-3 border-b-2 border-foreground"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      <div className="flex items-end gap-4">
-        {number && <span className="section-num">{number}</span>}
-        <div>
-          {subtitle && (
-            <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[hsl(var(--gold))] block mb-1">
-              {subtitle}
-            </span>
-          )}
-          <h2 className="font-display text-2xl md:text-3xl text-foreground leading-none">
-            {title}
-          </h2>
-        </div>
+      <div>
+        {subtitle && (
+          <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[hsl(var(--gold))] block mb-1">
+            {subtitle}
+          </span>
+        )}
+        <h2 className="font-display text-2xl md:text-3xl text-foreground leading-none">
+          {title}
+        </h2>
       </div>
       {onMore && (
         <button
@@ -82,7 +75,7 @@ const EditorialSection = ({
     </div>
   );
 
-  // FEATURE: 1 huge + 2 small alongside
+  // FEATURE: 1 lead + small list
   if (variant === "feature") {
     const lead = articles[0];
     const rest = articles.slice(1, 3);
@@ -91,9 +84,11 @@ const EditorialSection = ({
         {Header}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <article onClick={() => go(lead.id)} className="cursor-pointer group">
-            <div className="aspect-[4/3] overflow-hidden bg-foreground/5 mb-3">
-              <Img a={lead} className="w-full h-full" />
-            </div>
+            {hasImg(lead) && (
+              <div className="aspect-[4/3] overflow-hidden bg-foreground/5 mb-3">
+                <Img a={lead} className="w-full h-full" />
+              </div>
+            )}
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary">
               {lead.category}
             </span>
@@ -116,22 +111,41 @@ const EditorialSection = ({
                 onClick={() => go(a.id)}
                 className={`cursor-pointer group flex-1 ${i !== 0 ? "border-t border-foreground/15 pt-5 mt-5" : ""}`}
               >
-                <div className="grid grid-cols-5 gap-3">
-                  <div className="col-span-2 aspect-[4/3] overflow-hidden bg-foreground/5">
-                    <Img a={a} className="w-full h-full" />
+                {hasImg(a) ? (
+                  <div className="grid grid-cols-5 gap-3">
+                    <div className="col-span-2 aspect-[4/3] overflow-hidden bg-foreground/5">
+                      <Img a={a} className="w-full h-full" />
+                    </div>
+                    <div className="col-span-3">
+                      <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">
+                        {a.category}
+                      </span>
+                      <h4 className="font-display text-base md:text-xl text-foreground leading-tight mt-1 group-hover:text-primary transition-colors line-clamp-3">
+                        {decodeHtmlEntities(a.title)}
+                      </h4>
+                      <span className="text-[10px] text-muted-foreground mt-2 block uppercase tracking-wider">
+                        {timeAgo(a.published_at, language)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="col-span-3">
+                ) : (
+                  <div>
                     <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">
                       {a.category}
                     </span>
-                    <h4 className="font-display text-base md:text-xl text-foreground leading-tight mt-1 group-hover:text-primary transition-colors line-clamp-3">
+                    <h4 className="font-display text-lg md:text-2xl text-foreground leading-tight mt-1 group-hover:text-primary transition-colors line-clamp-3">
                       {decodeHtmlEntities(a.title)}
                     </h4>
+                    {a.description && (
+                      <p className="text-muted-foreground text-sm mt-1.5 line-clamp-2">
+                        {decodeHtmlEntities(a.description)}
+                      </p>
+                    )}
                     <span className="text-[10px] text-muted-foreground mt-2 block uppercase tracking-wider">
                       {timeAgo(a.published_at, language)}
                     </span>
                   </div>
-                </div>
+                )}
               </article>
             ))}
           </div>
@@ -140,32 +154,27 @@ const EditorialSection = ({
     );
   }
 
-  // LIST: numbered editorial list (no images)
+  // LIST: editorial list (no images, no numbers)
   if (variant === "list") {
     return (
       <section dir={isRTL ? "rtl" : "ltr"} className="py-8 border-b border-foreground/15">
         {Header}
         <ol className="space-y-0">
-          {articles.slice(0, 6).map((a, i) => (
+          {articles.slice(0, 6).map((a) => (
             <li
               key={a.id}
               onClick={() => go(a.id)}
-              className="cursor-pointer group flex gap-4 py-3 border-b border-foreground/10 last:border-b-0"
+              className="cursor-pointer group py-3 border-b border-foreground/10 last:border-b-0"
             >
-              <span className="font-display text-3xl text-[hsl(var(--gold))] leading-none w-10 shrink-0">
-                {String(i + 1).padStart(2, "0")}
+              <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary block mb-1">
+                {a.category}
               </span>
-              <div className="flex-1 min-w-0">
-                <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary block mb-1">
-                  {a.category}
-                </span>
-                <h4 className="font-display text-base text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                  {decodeHtmlEntities(a.title)}
-                </h4>
-                <span className="text-[10px] text-muted-foreground mt-1 block uppercase tracking-wider">
-                  {timeAgo(a.published_at, language)}
-                </span>
-              </div>
+              <h4 className="font-display text-base text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                {decodeHtmlEntities(a.title)}
+              </h4>
+              <span className="text-[10px] text-muted-foreground mt-1 block uppercase tracking-wider">
+                {timeAgo(a.published_at, language)}
+              </span>
             </li>
           ))}
         </ol>
@@ -181,9 +190,11 @@ const EditorialSection = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {articles.slice(0, 4).map((a) => (
             <article key={a.id} onClick={() => go(a.id)} className="cursor-pointer group">
-              <div className="aspect-[4/3] overflow-hidden bg-foreground/5 mb-2">
-                <Img a={a} className="w-full h-full" />
-              </div>
+              {hasImg(a) && (
+                <div className="aspect-[4/3] overflow-hidden bg-foreground/5 mb-2">
+                  <Img a={a} className="w-full h-full" />
+                </div>
+              )}
               <span className="text-[9px] font-bold tracking-[0.2em] uppercase text-primary">
                 {a.category}
               </span>
@@ -200,16 +211,18 @@ const EditorialSection = ({
     );
   }
 
-  // TRIO (default): 3 columns equal
+  // TRIO (default)
   return (
     <section dir={isRTL ? "rtl" : "ltr"} className="py-8 border-b border-foreground/15">
       {Header}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {articles.slice(0, 3).map((a) => (
           <article key={a.id} onClick={() => go(a.id)} className="cursor-pointer group">
-            <div className="aspect-[16/10] overflow-hidden bg-foreground/5 mb-3">
-              <Img a={a} className="w-full h-full" />
-            </div>
+            {hasImg(a) && (
+              <div className="aspect-[16/10] overflow-hidden bg-foreground/5 mb-3">
+                <Img a={a} className="w-full h-full" />
+              </div>
+            )}
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary">
               {a.category}
             </span>
