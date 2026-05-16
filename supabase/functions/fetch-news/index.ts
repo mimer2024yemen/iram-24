@@ -502,9 +502,8 @@ serve(async (req) => {
           }
 
           const hash = hashString(`${titleKey}|${urlKey}`);
-          const category = source.category && source.category !== "none"
-            ? source.category
-            : categorize(item.title, item.description, source.language, source.name);
+          // Always use smart categorizer — analyzes title + description to pick the best section.
+          const category = categorize(item.title, item.description, source.language, source.name);
 
           // Try to fetch og:image if no image found
           let finalImage = item.imageUrl;
