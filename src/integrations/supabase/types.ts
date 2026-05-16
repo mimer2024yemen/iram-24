@@ -380,6 +380,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      smart_categorize_ar: { Args: { _text: string }; Returns: string }
+      smart_categorize_en: { Args: { _text: string }; Returns: string }
     }
     Enums: {
       app_role: "admin"
