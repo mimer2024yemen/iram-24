@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { RadioStation } from "@/data/defaultStations";
 import { getStations, getFavorites, toggleFavorite, getLastPlayed } from "@/lib/radioStorage";
 import { useRadioPlayer, PlayerStatus } from "@/hooks/useRadioPlayer";
-import BottomNav from "@/components/BottomNav";
 import { Search, Heart, Radio, Loader2, Pause, Play, AlertCircle, X, Volume2, VolumeX } from "lucide-react";
 
 const RadioPage = () => {
@@ -236,7 +235,6 @@ const RadioPage = () => {
         })}
       </div>
 
-      <BottomNav />
     </div>
   );
 };

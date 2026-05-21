@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getFavorites } from "@/lib/newsUtils";
 import { Article } from "@/hooks/useArticles";
 import NewsCard from "@/components/NewsCard";
-import BottomNav from "@/components/BottomNav";
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -34,7 +33,6 @@ const Favorites = () => {
           articles.map((a) => <NewsCard key={a.id} article={a} language={a.language as "AR" | "EN"} />)
         )}
       </div>
-      <BottomNav />
     </div>
   );
 };
