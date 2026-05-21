@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Article {
@@ -19,13 +19,24 @@ export interface Article {
   is_manual: boolean;
 }
 
-export function useArticles(language: "AR" | "EN", category?: string, limit = 15) {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+// Module-level memory cache for instant subsequent loads (SPA-like UX)
+const cache = new Map<string, { data: Article[]; ts: number }>();
+const CACHE_TTL = 60_000; // 1 minute
+
+export function useArticles(language: "AR" | "EN", category?: string, limit = 30) {
+  const cacheKey = `${language}|${category || ""}|${limit}`;
+  const cached = cache.get(cacheKey);
+  const fresh = cached && Date.now() - cached.ts < CACHE_TTL;
+
+  const [articles, setArticles] = useState<Article[]>(cached?.data || []);
+  const [loading, setLoading] = useState(!fresh);
+  const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const fetchArticles = async () => {
-      setLoading(true);
+    let alive = true;
+
+    const fetchArticles = async (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
       let q = supabase
         .from("articles")
         .select("*")
@@ -38,19 +49,36 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 15
       }
 
       const { data } = await q;
-      setArticles((data as Article[]) || []);
+      if (!alive) return;
+      const items = (data as Article[]) || [];
+      cache.set(cacheKey, { data: items, ts: Date.now() });
+      setArticles(items);
       setLoading(false);
     };
-    fetchArticles();
 
+    // Serve cache instantly, refetch silently if stale
+    if (fresh) {
+      setArticles(cached!.data);
+      setLoading(false);
+    } else {
+      fetchArticles(true);
+    }
+
+    // Realtime — debounced to avoid lag
     const channel = supabase
-      .channel("articles-realtime")
+      .channel(`articles-rt-${cacheKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
-        fetchArticles();
+        if (debounceRef.current) window.clearTimeout(debounceRef.current);
+        debounceRef.current = window.setTimeout(() => fetchArticles(false), 1500);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      alive = false;
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, category, limit]);
 
   return { articles, loading };

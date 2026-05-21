@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/hooks/useArticles";
 import { decodeHtmlEntities, timeAgo } from "@/lib/newsUtils";
 import { ArrowRight, Landmark, TrendingUp, Cpu, Trophy, Globe, Heart, Stethoscope, Palette, Radio as RadioIcon, Newspaper } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
 
 const categoryIcons: Record<string, React.ElementType> = {
   "محلي": Newspaper,
@@ -112,7 +111,6 @@ const CategoriesPage = () => {
         </div>
       )}
 
-      <BottomNav />
     </div>
   );
 };

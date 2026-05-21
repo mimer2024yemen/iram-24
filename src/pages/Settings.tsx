@@ -1,7 +1,6 @@
 import { ArrowRight, Moon, Sun, Bell, BellOff, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import BottomNav from "@/components/BottomNav";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -79,7 +78,6 @@ const Settings = () => {
         </div>
       </div>
 
-      <BottomNav />
     </div>
   );
 };
