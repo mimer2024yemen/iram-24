@@ -63,10 +63,8 @@ const MarketTicker = ({ language }: Props) => {
         {/* Scrolling track */}
         <div className="flex-1 overflow-hidden relative">
           <div
-            className={`flex items-center gap-7 whitespace-nowrap py-2 ${
-              isRTL ? "animate-ticker-rtl" : "animate-ticker-ltr"
-            }`}
-            style={{ animationDuration: `${Math.max(60, quotes.length * 6)}s` }}
+            className="flex items-center gap-7 whitespace-nowrap py-2 animate-ticker-scroll"
+            style={{ animationDuration: `${Math.max(50, quotes.length * 5)}s`, animationDirection: isRTL ? "reverse" : "normal" }}
           >
             {loop.map((q, i) => {
               const up = q.change >= 0;
@@ -79,9 +77,7 @@ const MarketTicker = ({ language }: Props) => {
                   </span>
                   <span
                     className={`flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded ${
-                      up
-                        ? "text-emerald-300 bg-emerald-500/10"
-                        : "text-rose-300 bg-rose-500/10"
+                      up ? "text-emerald-300 bg-emerald-500/10" : "text-rose-300 bg-rose-500/10"
                     }`}
                   >
                     {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -93,8 +89,8 @@ const MarketTicker = ({ language }: Props) => {
             })}
           </div>
           {/* Edge fades */}
-          <div className="pointer-events-none absolute inset-y-0 start-0 w-10 bg-gradient-to-e from-[hsl(220_50%_5%)] to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 end-0 w-10 bg-gradient-to-w from-[hsl(220_50%_5%)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[hsl(220_50%_5%)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[hsl(220_50%_5%)] to-transparent" />
         </div>
       </div>
     </div>
