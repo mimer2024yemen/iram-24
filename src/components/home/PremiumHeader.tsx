@@ -1,6 +1,5 @@
-import { Search, Menu, Globe } from "lucide-react";
+import { Search, Menu, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import eramLogo from "@/assets/eram-logo.png";
 import { useEffect, useState } from "react";
 
 interface Props {
