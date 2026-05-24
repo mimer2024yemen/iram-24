@@ -339,7 +339,9 @@ const NewsFeed = () => {
       {!loading && articles.length > 0 && isHome && page === 1 && (
         <LiveTicker articles={articles.slice(0, 10)} language={language} onBeforeNavigate={saveScroll} />
       )}
+      <MarketTicker language={language} />
       <BreakingNewsBar language={language} />
+
 
       <main className="max-w-screen-xl mx-auto px-4 md:px-6" style={{ minHeight: "60vh" }}>
         {loading && articles.length === 0 ? (
