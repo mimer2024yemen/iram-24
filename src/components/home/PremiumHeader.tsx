@@ -1,6 +1,5 @@
-import { Search, Menu, Globe } from "lucide-react";
+import { Search, Menu, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import eramLogo from "@/assets/eram-logo.png";
 import { useEffect, useState } from "react";
 
 interface Props {
@@ -58,16 +57,25 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
             <Menu size={20} className="text-foreground group-hover:text-[hsl(var(--gold))] transition-colors" strokeWidth={2.25} />
           </button>
 
-          {/* Center logo + tagline */}
-          <button onClick={() => navigate("/")} className="flex items-center gap-3 group min-w-0">
-            <img
-              src={eramLogo}
-              alt="Eram News"
-              className="h-9 md:h-11 object-contain transition-transform group-hover:scale-[1.02]"
-            />
+          {/* Center wordmark */}
+          <button onClick={() => navigate("/")} className="flex items-center gap-3 group min-w-0" aria-label="إيرام 24">
+            <div className="flex items-baseline gap-[2px] leading-none">
+              <span
+                className="font-display text-[26px] md:text-[32px] font-black tracking-tight text-foreground transition-colors group-hover:text-[hsl(var(--gold))]"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                {isRTL ? "إيرام" : "ERAM"}
+              </span>
+              <span
+                className="font-display text-[26px] md:text-[32px] font-black bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(38_72%_48%)] bg-clip-text text-transparent"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                24
+              </span>
+            </div>
             <div className="hidden md:flex flex-col leading-tight border-s border-foreground/15 ps-3">
               <span className="text-[10px] tracking-[0.35em] uppercase text-[hsl(var(--gold))] font-bold">
-                {isRTL ? "إيرام برس" : "ERAM PRESS"}
+                {isRTL ? "نبض الحدث" : "PULSE OF NEWS"}
               </span>
               <span className="text-[10px] text-muted-foreground tracking-wider">
                 {dateLabel}
@@ -75,8 +83,23 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
             </div>
           </button>
 
-          {/* Right: Lang + Search */}
-          <div className="flex items-center gap-2">
+          {/* Right: Live + Lang + Search */}
+          <div className="flex items-center gap-1.5 md:gap-2">
+            {/* Live broadcast button */}
+            <button
+              onClick={() => navigate("/radio")}
+              aria-label={isRTL ? "البث المباشر" : "Live Radio"}
+              className="group relative flex items-center gap-1.5 px-2.5 md:px-3 h-9 md:h-10 rounded-full bg-[hsl(var(--crimson))]/12 border border-[hsl(var(--crimson))]/35 hover:bg-[hsl(var(--crimson))]/25 transition-all active:scale-95"
+            >
+              <span className="relative flex items-center justify-center">
+                <span className="absolute inline-flex h-2 w-2 rounded-full bg-[hsl(var(--crimson))] opacity-75 animate-ping" />
+                <Radio size={14} className="text-[hsl(var(--crimson))] relative" strokeWidth={2.5} />
+              </span>
+              <span className="hidden sm:inline text-[10px] md:text-[11px] font-black tracking-[0.18em] uppercase text-[hsl(var(--crimson))]">
+                {isRTL ? "مباشر" : "LIVE"}
+              </span>
+            </button>
+
             {/* Premium language pill */}
             <div className="relative flex items-center bg-foreground/5 rounded-full p-1 border border-foreground/10">
               <span
@@ -87,7 +110,7 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
               />
               <button
                 onClick={() => onLanguageChange("AR")}
-                className={`relative z-10 px-3 py-1.5 text-[11px] font-bold tracking-wider transition-colors ${
+                className={`relative z-10 px-2.5 py-1.5 text-[11px] font-bold tracking-wider transition-colors ${
                   language === "AR" ? "text-[hsl(var(--primary-foreground))]" : "text-muted-foreground"
                 }`}
               >
@@ -95,7 +118,7 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
               </button>
               <button
                 onClick={() => onLanguageChange("EN")}
-                className={`relative z-10 px-3 py-1.5 text-[11px] font-bold tracking-wider transition-colors ${
+                className={`relative z-10 px-2.5 py-1.5 text-[11px] font-bold tracking-wider transition-colors ${
                   language === "EN" ? "text-[hsl(var(--primary-foreground))]" : "text-muted-foreground"
                 }`}
               >
@@ -106,9 +129,10 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
             <button
               onClick={onSearchToggle}
               aria-label="Search"
-              className="group w-11 h-11 flex items-center justify-center rounded-full bg-foreground/5 hover:bg-[hsl(var(--gold))]/15 transition-all active:scale-90"
+              className="group w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-full bg-foreground/5 hover:bg-[hsl(var(--gold))]/15 transition-all active:scale-90"
             >
-              <Search size={19} className="text-foreground group-hover:text-[hsl(var(--gold))] transition-colors" strokeWidth={2.25} />
+              <Search size={18} className="text-foreground group-hover:text-[hsl(var(--gold))] transition-colors" strokeWidth={2.25} />
+
             </button>
           </div>
         </div>
