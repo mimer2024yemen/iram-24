@@ -12,6 +12,7 @@ import CinematicHero from "@/components/home/CinematicHero";
 import PremiumSkeleton from "@/components/home/PremiumSkeleton";
 import EditorialSection from "@/components/home/EditorialSection";
 import LiveTicker from "@/components/home/LiveTicker";
+import MarketTicker from "@/components/home/MarketTicker";
 import SiteFooter from "@/components/home/SiteFooter";
 import NewsCard from "@/components/NewsCard";
 import { ChevronLeft, ChevronRight, TrendingUp, Flame, Star } from "lucide-react";
