@@ -50,8 +50,8 @@ const NewsFeed = () => {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const isHome = activeCategory === "الرئيسية" || activeCategory === "Home";
-  const fetchLimit = isHome && page === 1 ? 120 : PAGE_SIZE + 1;
-  const { articles, loading } = useArticles(language, activeCategory, page * fetchLimit);
+  const fetchLimit = isHome && page === 1 ? 60 : PAGE_SIZE * page + 1;
+  const { articles, loading } = useArticles(language, activeCategory, fetchLimit);
 
   const startIdx = (page - 1) * PAGE_SIZE;
   const pageArticles = articles.slice(startIdx, startIdx + PAGE_SIZE);

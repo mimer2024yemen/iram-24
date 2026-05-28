@@ -19,57 +19,97 @@ export interface Article {
   is_manual: boolean;
 }
 
-// Module-level memory cache for instant subsequent loads (SPA-like UX)
-const cache = new Map<string, { data: Article[]; ts: number }>();
-const CACHE_TTL = 60_000; // 1 minute
+// Persistent localStorage cache for instant first paint (survives refresh)
+const MEM_CACHE = new Map<string, { data: Article[]; ts: number }>();
+const CACHE_TTL = 60_000; // 1 min fresh
+const STALE_TTL = 24 * 60 * 60 * 1000; // 24h stale-while-revalidate
+
+// Only the columns the UI actually needs — keeps payloads small & fast
+const COLS =
+  "id,title,description,url,image_url,category,language,published_at,views,source_id,created_at,author_name,author_image_url,is_manual";
+
+function readPersisted(key: string): { data: Article[]; ts: number } | null {
+  try {
+    const raw = localStorage.getItem("eram_cache_" + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.ts > STALE_TTL) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function writePersisted(key: string, data: Article[]) {
+  try {
+    localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() }));
+  } catch {/* quota */}
+}
 
 export function useArticles(language: "AR" | "EN", category?: string, limit = 30) {
   const cacheKey = `${language}|${category || ""}|${limit}`;
-  const cached = cache.get(cacheKey);
-  const fresh = cached && Date.now() - cached.ts < CACHE_TTL;
+  const initial =
+    MEM_CACHE.get(cacheKey) ||
+    readPersisted(cacheKey) ||
+    null;
 
-  const [articles, setArticles] = useState<Article[]>(cached?.data || []);
-  const [loading, setLoading] = useState(!fresh);
+  const [articles, setArticles] = useState<Article[]>(initial?.data || []);
+  const [loading, setLoading] = useState(!initial);
   const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     let alive = true;
+    let attempt = 0;
 
     const fetchArticles = async (showLoading: boolean) => {
-      if (showLoading) setLoading(true);
-      let q = supabase
-        .from("articles")
-        .select("*")
-        .eq("language", language)
-        .order("published_at", { ascending: false })
-        .limit(limit);
+      if (showLoading && articles.length === 0) setLoading(true);
 
-      if (category && category !== "الرئيسية" && category !== "Home") {
-        q = q.eq("category", category);
+      const run = async (): Promise<Article[] | null> => {
+        let q = supabase
+          .from("articles")
+          .select(COLS)
+          .eq("language", language)
+          .order("published_at", { ascending: false })
+          .limit(limit);
+        if (category && category !== "الرئيسية" && category !== "Home") {
+          q = q.eq("category", category);
+        }
+        // 10s safety timeout
+        const timer = new Promise<null>((res) => setTimeout(() => res(null), 10_000));
+        const result = await Promise.race([q, timer]);
+        if (!result || (result as any).error) return null;
+        return ((result as any).data as Article[]) || [];
+      };
+
+      // Retry up to 3 times with backoff
+      for (attempt = 0; attempt < 3; attempt++) {
+        const data = await run();
+        if (!alive) return;
+        if (data) {
+          MEM_CACHE.set(cacheKey, { data, ts: Date.now() });
+          writePersisted(cacheKey, data);
+          setArticles(data);
+          setLoading(false);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
       }
-
-      const { data } = await q;
-      if (!alive) return;
-      const items = (data as Article[]) || [];
-      cache.set(cacheKey, { data: items, ts: Date.now() });
-      setArticles(items);
-      setLoading(false);
+      // All failed — keep whatever we have (cached or empty) but stop spinner
+      if (alive) setLoading(false);
     };
 
-    // Serve cache instantly, refetch silently if stale
+    const fresh = initial && Date.now() - initial.ts < CACHE_TTL;
     if (fresh) {
-      setArticles(cached!.data);
       setLoading(false);
     } else {
       fetchArticles(true);
     }
 
-    // Realtime — debounced to avoid lag
+    // Realtime — debounced, silent refresh
     const channel = supabase
       .channel(`articles-rt-${cacheKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
         if (debounceRef.current) window.clearTimeout(debounceRef.current);
-        debounceRef.current = window.setTimeout(() => fetchArticles(false), 1500);
+        debounceRef.current = window.setTimeout(() => fetchArticles(false), 2000);
       })
       .subscribe();
 
