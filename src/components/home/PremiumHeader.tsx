@@ -1,6 +1,7 @@
 import { Search, Menu, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useRadio } from "@/contexts/RadioContext";
 
 interface Props {
   language: "AR" | "EN";
@@ -12,6 +13,7 @@ interface Props {
 
 const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggle }: Props) => {
   const navigate = useNavigate();
+  const { openSheet } = useRadio();
   const isRTL = language === "AR";
   const [scrolled, setScrolled] = useState(false);
   const [dateLabel, setDateLabel] = useState("");
@@ -87,7 +89,7 @@ const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggl
           <div className="flex items-center gap-1.5 md:gap-2">
             {/* Live broadcast button */}
             <button
-              onClick={() => navigate("/radio")}
+              onClick={() => openSheet()}
               aria-label={isRTL ? "البث المباشر" : "Live Radio"}
               className="group relative flex items-center gap-1.5 px-2.5 md:px-3 h-9 md:h-10 rounded-full bg-[hsl(var(--crimson))]/12 border border-[hsl(var(--crimson))]/35 hover:bg-[hsl(var(--crimson))]/25 transition-all active:scale-95"
             >

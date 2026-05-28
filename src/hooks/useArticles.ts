@@ -19,38 +19,66 @@ export interface Article {
   is_manual: boolean;
 }
 
-// Persistent localStorage cache for instant first paint (survives refresh)
 const MEM_CACHE = new Map<string, { data: Article[]; ts: number }>();
-const CACHE_TTL = 60_000; // 1 min fresh
-const STALE_TTL = 24 * 60 * 60 * 1000; // 24h stale-while-revalidate
+const CACHE_TTL = 60_000;
+const STALE_TTL = 24 * 60 * 60 * 1000;
 
-// Only the columns the UI actually needs — keeps payloads small & fast
 const COLS =
   "id,title,description,url,image_url,category,language,published_at,views,source_id,created_at,author_name,author_image_url,is_manual";
 
-function readPersisted(key: string): { data: Article[]; ts: number } | null {
+function readPersisted(key: string) {
   try {
     const raw = localStorage.getItem("eram_cache_" + key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as { data: Article[]; ts: number };
     if (Date.now() - parsed.ts > STALE_TTL) return null;
     return parsed;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 function writePersisted(key: string, data: Article[]) {
+  try { localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
+
+// (unused legacy helper removed)
+
+async function fetchEdgeDirect(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {
   try {
-    localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() }));
-  } catch {/* quota */}
+    const params = new URLSearchParams({ lang: language, limit: String(limit) });
+    if (category && category !== "الرئيسية" && category !== "Home") params.set("category", category);
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json?.articles as Article[]) || null;
+  } catch { return null; }
+}
+
+async function fetchDirect(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {
+  let q = supabase
+    .from("articles")
+    .select(COLS)
+    .eq("language", language)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (category && category !== "الرئيسية" && category !== "Home") q = q.eq("category", category);
+  const timer = new Promise<null>((r) => setTimeout(() => r(null), 10_000));
+  const result = await Promise.race([q, timer]);
+  if (!result || (result as any).error) return null;
+  return ((result as any).data as Article[]) || [];
 }
 
 export function useArticles(language: "AR" | "EN", category?: string, limit = 30) {
   const cacheKey = `${language}|${category || ""}|${limit}`;
-  const initial =
-    MEM_CACHE.get(cacheKey) ||
-    readPersisted(cacheKey) ||
-    null;
+  const initial = MEM_CACHE.get(cacheKey) || readPersisted(cacheKey);
 
   const [articles, setArticles] = useState<Article[]>(initial?.data || []);
   const [loading, setLoading] = useState(!initial);
@@ -58,31 +86,14 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 30
 
   useEffect(() => {
     let alive = true;
-    let attempt = 0;
 
     const fetchArticles = async (showLoading: boolean) => {
       if (showLoading && articles.length === 0) setLoading(true);
 
-      const run = async (): Promise<Article[] | null> => {
-        let q = supabase
-          .from("articles")
-          .select(COLS)
-          .eq("language", language)
-          .order("published_at", { ascending: false })
-          .limit(limit);
-        if (category && category !== "الرئيسية" && category !== "Home") {
-          q = q.eq("category", category);
-        }
-        // 10s safety timeout
-        const timer = new Promise<null>((res) => setTimeout(() => res(null), 10_000));
-        const result = await Promise.race([q, timer]);
-        if (!result || (result as any).error) return null;
-        return ((result as any).data as Article[]) || [];
-      };
-
-      // Retry up to 3 times with backoff
-      for (attempt = 0; attempt < 3; attempt++) {
-        const data = await run();
+      // Try edge (cached) first → fall back to direct DB
+      for (let attempt = 0; attempt < 3; attempt++) {
+        let data = await fetchEdgeDirect(language, category, limit);
+        if (!data) data = await fetchDirect(language, category, limit);
         if (!alive) return;
         if (data) {
           MEM_CACHE.set(cacheKey, { data, ts: Date.now() });
@@ -93,18 +104,13 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 30
         }
         await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
       }
-      // All failed — keep whatever we have (cached or empty) but stop spinner
       if (alive) setLoading(false);
     };
 
     const fresh = initial && Date.now() - initial.ts < CACHE_TTL;
-    if (fresh) {
-      setLoading(false);
-    } else {
-      fetchArticles(true);
-    }
+    if (fresh) setLoading(false);
+    else fetchArticles(true);
 
-    // Realtime — debounced, silent refresh
     const channel = supabase
       .channel(`articles-rt-${cacheKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
