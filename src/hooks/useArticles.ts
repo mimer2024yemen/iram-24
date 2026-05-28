@@ -39,23 +39,7 @@ function writePersisted(key: string, data: Article[]) {
   try { localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() })); } catch {}
 }
 
-// Try edge function first (in-memory cached, resilient when DB is slow).
-async function fetchViaEdge(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {
-  try {
-    const params = new URLSearchParams({ lang: language, limit: String(limit) });
-    if (category && category !== "الرئيسية" && category !== "Home") params.set("category", category);
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const { data } = await supabase.functions.invoke("home-feed", {
-      method: "GET",
-      headers: {},
-      // @ts-expect-error supabase-js v2 passes query through
-    });
-    clearTimeout(timer);
-    // The SDK doesn't pass query strings on GET; use direct fetch instead:
-    return null;
-  } catch { return null; }
-}
+// (unused legacy helper removed)
 
 async function fetchEdgeDirect(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {
   try {
