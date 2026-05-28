@@ -212,6 +212,28 @@
 .animate-ticker-scroll { animation: ticker-scroll 60s linear infinite; }
 .animate-glow { animation: glow 2s ease-out infinite; }
 
+/* === Radio Sheet + Mini Player === */
+@keyframes slide-up-sheet {
+  0% { transform: translateY(100%); opacity: 0.6; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-up {
+  0% { transform: translateY(110%); }
+  100% { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes radio-flash {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--gold) / 0); background-color: hsl(var(--gold) / 0.08); }
+  20% { box-shadow: 0 0 0 6px hsl(var(--gold) / 0.55); background-color: hsl(var(--gold) / 0.30); }
+  35% { box-shadow: 0 0 0 0 hsl(var(--gold) / 0); background-color: hsl(var(--gold) / 0.08); }
+  55% { box-shadow: 0 0 0 6px hsl(var(--gold) / 0.55); background-color: hsl(var(--gold) / 0.30); }
+  70% { box-shadow: 0 0 0 0 hsl(var(--gold) / 0); background-color: hsl(var(--gold) / 0.08); }
+  85% { box-shadow: 0 0 0 6px hsl(var(--gold) / 0.55); background-color: hsl(var(--gold) / 0.30); }
+}
+.animate-radio-flash { animation: radio-flash 2.4s ease-in-out 1; }
+body.has-mini-player { padding-bottom: 84px; }
+
 /* === Premium Skeleton Shimmer === */
 .skeleton-shimmer {
   background: linear-gradient(
