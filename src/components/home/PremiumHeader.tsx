@@ -13,6 +13,7 @@ interface Props {
 
 const PremiumHeader = ({ language, onLanguageChange, onMenuToggle, onSearchToggle }: Props) => {
   const navigate = useNavigate();
+  const { openSheet } = useRadio();
   const isRTL = language === "AR";
   const [scrolled, setScrolled] = useState(false);
   const [dateLabel, setDateLabel] = useState("");
