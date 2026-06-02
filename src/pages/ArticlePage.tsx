@@ -44,6 +44,50 @@ const ArticlePage = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Inject JSON-LD NewsArticle + Breadcrumb structured data
+  useEffect(() => {
+    if (!article) return;
+    const url = `${window.location.origin}/article/${article.id}`;
+    const ld = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "NewsArticle",
+          headline: decodeHtmlEntities(article.title),
+          image: article.image_url ? [article.image_url] : undefined,
+          datePublished: article.published_at || article.created_at,
+          dateModified: article.published_at || article.created_at,
+          author: article.author_name ? [{ "@type": "Person", name: article.author_name }] : undefined,
+          publisher: { "@type": "Organization", name: "إيرام 24", logo: { "@type": "ImageObject", url: `${window.location.origin}/icon-512.png` } },
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          articleSection: article.category,
+          inLanguage: article.language === "EN" ? "en" : "ar",
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "إيرام 24", item: window.location.origin },
+            { "@type": "ListItem", position: 2, name: article.category, item: `${window.location.origin}/categories?c=${encodeURIComponent(article.category)}` },
+            { "@type": "ListItem", position: 3, name: decodeHtmlEntities(article.title), item: url },
+          ],
+        },
+      ],
+    };
+    const tag = document.createElement("script");
+    tag.type = "application/ld+json";
+    tag.id = "article-jsonld";
+    tag.text = JSON.stringify(ld);
+    document.querySelectorAll("#article-jsonld").forEach((n) => n.remove());
+    document.head.appendChild(tag);
+    // Title + description for SEO
+    const prevTitle = document.title;
+    document.title = `${decodeHtmlEntities(article.title)} | إيرام 24`;
+    return () => {
+      tag.remove();
+      document.title = prevTitle;
+    };
+  }, [article]);
+
   useEffect(() => {
     if (!id) return;
     const fetchArticle = async () => {
