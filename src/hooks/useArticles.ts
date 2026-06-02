@@ -26,6 +26,24 @@ const STALE_TTL = 24 * 60 * 60 * 1000;
 const COLS =
   "id,title,description,url,image_url,category,language,published_at,views,source_id,created_at,author_name,author_image_url,is_manual";
 
+const LRU_KEY = "eram_cache_index";
+const LRU_MAX = 50;
+function readLRU(): string[] {
+  try { return JSON.parse(localStorage.getItem(LRU_KEY) || "[]"); } catch { return []; }
+}
+function writeLRU(list: string[]) {
+  try { localStorage.setItem(LRU_KEY, JSON.stringify(list)); } catch {}
+}
+function touchLRU(key: string) {
+  let list = readLRU().filter((k) => k !== key);
+  list.unshift(key);
+  while (list.length > LRU_MAX) {
+    const evict = list.pop();
+    if (evict) { try { localStorage.removeItem("eram_cache_" + evict); } catch {} }
+  }
+  writeLRU(list);
+}
+
 function readPersisted(key: string) {
   try {
     const raw = localStorage.getItem("eram_cache_" + key);
@@ -36,7 +54,10 @@ function readPersisted(key: string) {
   } catch { return null; }
 }
 function writePersisted(key: string, data: Article[]) {
-  try { localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+  try {
+    localStorage.setItem("eram_cache_" + key, JSON.stringify({ data, ts: Date.now() }));
+    touchLRU(key);
+  } catch {}
 }
 
 // (unused legacy helper removed)

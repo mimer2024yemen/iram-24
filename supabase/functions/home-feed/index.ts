@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
   const cached = cache.get(key);
   if (cached && now - cached.ts < FRESH_TTL) {
-    return json(cached.data, true);
+    return await json(cached.data, true);
   }
 
   try {
@@ -53,11 +53,11 @@ Deno.serve(async (req) => {
     }
     const data = (result as any).data;
     cache.set(key, { data, ts: now });
-    return json(data, false);
+    return await json(data, false);
   } catch (_err) {
     // Fall back to stale cache if we still have it
     if (cached && now - cached.ts < STALE_TTL) {
-      return json(cached.data, true, true);
+      return await json(cached.data, true, true);
     }
     return new Response(JSON.stringify({ error: "unavailable", articles: [] }), {
       status: 503,
@@ -66,12 +66,29 @@ Deno.serve(async (req) => {
   }
 });
 
-function json(articles: unknown, cached: boolean, stale = false) {
-  return new Response(JSON.stringify({ articles, cached, stale }), {
+async function json(articles: unknown, cached: boolean, stale = false) {
+  const body = JSON.stringify({ articles, cached, stale });
+  // Try gzip if available in runtime
+  try {
+    // @ts-ignore
+    if (typeof CompressionStream !== "undefined") {
+      const stream = new Response(body).body!.pipeThrough(new CompressionStream("gzip"));
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+          "Vary": "Accept-Encoding",
+          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
+  } catch (_) { /* fall through */ }
+  return new Response(body, {
     headers: {
       ...corsHeaders,
       "Content-Type": "application/json",
-      "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=600",
+      "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
     },
   });
 }

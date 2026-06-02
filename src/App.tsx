@@ -48,6 +48,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RadioProvider>
+          <a href="#main-content" className="skip-to-content">تخطي إلى المحتوى</a>
           <ScrollToTop />
           <BodyPaddingForPlayer />
           <Routes>

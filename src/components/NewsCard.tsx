@@ -117,9 +117,11 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
           {title}
         </h3>
         <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-foreground/10">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
             <Clock size={10} />
             {timeAgo(article.published_at, language)}
+            <span className="opacity-40">•</span>
+            <span>{Math.max(1, Math.round(((article.description?.split(/\s+/).length || 60)) / 200))} {isRTL ? "د" : "min"}</span>
           </span>
           <div className="flex items-center gap-2.5">
             <button onClick={handleShare} aria-label="Share" className="text-muted-foreground hover:text-[hsl(var(--gold))] transition-colors">
