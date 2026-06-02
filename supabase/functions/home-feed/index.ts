@@ -53,11 +53,11 @@ Deno.serve(async (req) => {
     }
     const data = (result as any).data;
     cache.set(key, { data, ts: now });
-    return json(data, false);
+    return await json(data, false);
   } catch (_err) {
     // Fall back to stale cache if we still have it
     if (cached && now - cached.ts < STALE_TTL) {
-      return json(cached.data, true, true);
+      return await json(cached.data, true, true);
     }
     return new Response(JSON.stringify({ error: "unavailable", articles: [] }), {
       status: 503,
