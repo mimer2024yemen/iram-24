@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
   const cached = cache.get(key);
   if (cached && now - cached.ts < FRESH_TTL) {
-    return json(cached.data, true);
+    return await json(cached.data, true);
   }
 
   try {
