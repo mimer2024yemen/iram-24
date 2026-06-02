@@ -249,7 +249,18 @@ const ArticlePage = () => {
         </figure>
       )}
 
-      <article className="max-w-screen-md mx-auto px-4 md:px-6 pt-8 pb-10">
+      <article id="main-content" className="max-w-screen-md mx-auto px-4 md:px-6 pt-8 pb-10">
+        {/* Breadcrumb */}
+        <nav aria-label={isRTL ? "مسار التنقل" : "Breadcrumb"} className="mb-4">
+          <ol className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <li><button onClick={() => navigate("/")} className="hover:text-[hsl(var(--gold))] transition-colors">{isRTL ? "الرئيسية" : "Home"}</button></li>
+            <li aria-hidden>/</li>
+            <li><button onClick={() => navigate(`/categories?c=${encodeURIComponent(article.category)}`)} className="hover:text-[hsl(var(--gold))] transition-colors">{article.category}</button></li>
+            <li aria-hidden>/</li>
+            <li className="text-foreground/80 truncate max-w-[40vw]">{title}</li>
+          </ol>
+        </nav>
+
         {!hasHero && (
           <>
             <div className="text-center mb-5">
