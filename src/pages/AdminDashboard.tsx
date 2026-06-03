@@ -13,7 +13,11 @@ import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
 import CurrencyManager from "@/components/admin/CurrencyManager";
 import SourceDebugger from "@/components/admin/SourceDebugger";
 import RadioAdminPanel from "@/components/admin/RadioAdminPanel";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug, Radio } from "lucide-react";
+import BlockedWordsManager from "@/components/admin/BlockedWordsManager";
+import SliderManager from "@/components/admin/SliderManager";
+import TrendingPanel from "@/components/admin/TrendingPanel";
+import FeaturedSectionManager from "@/components/admin/FeaturedSectionManager";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug, Radio, Ban, Image as ImageIcon, TrendingUp, ChefHat } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
