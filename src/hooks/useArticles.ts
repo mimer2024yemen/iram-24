@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getBlockedWords, removeBlockedWords } from "@/lib/blockedWords";
 
 export interface Article {
   id: string;
@@ -117,6 +118,15 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 30
         if (!data) data = await fetchDirect(language, category, limit);
         if (!alive) return;
         if (data) {
+          // Apply blocked-words cleanup to title/description
+          const blocked = await getBlockedWords();
+          if (blocked.length > 0) {
+            data = data.map((a) => ({
+              ...a,
+              title: removeBlockedWords(a.title || "", blocked),
+              description: a.description ? removeBlockedWords(a.description, blocked) : a.description,
+            }));
+          }
           MEM_CACHE.set(cacheKey, { data, ts: Date.now() });
           writePersisted(cacheKey, data);
           setArticles(data);

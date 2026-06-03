@@ -13,12 +13,16 @@ import BreakingNewsManager from "@/components/admin/BreakingNewsManager";
 import CurrencyManager from "@/components/admin/CurrencyManager";
 import SourceDebugger from "@/components/admin/SourceDebugger";
 import RadioAdminPanel from "@/components/admin/RadioAdminPanel";
-import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug, Radio } from "lucide-react";
+import BlockedWordsManager from "@/components/admin/BlockedWordsManager";
+import SliderManager from "@/components/admin/SliderManager";
+import TrendingPanel from "@/components/admin/TrendingPanel";
+import FeaturedSectionManager from "@/components/admin/FeaturedSectionManager";
+import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkles, Radar, Zap, DollarSign, Bug, Radio, Ban, Image as ImageIcon, TrendingUp, ChefHat } from "lucide-react";
 
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger" | "radio">("analytics");
+  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger" | "radio" | "blocked" | "slider" | "trending" | "featured">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate("/admin-dashboard-ERAM-SECURE/login");
@@ -31,7 +35,11 @@ const AdminDashboard = () => {
     { id: "analytics" as const, label: "إحصائيات", icon: BarChart3 },
     { id: "news" as const, label: "الأخبار", icon: Newspaper },
     { id: "editor" as const, label: "مقال جديد", icon: PenSquare },
+    { id: "trending" as const, label: "الرائج", icon: TrendingUp },
+    { id: "featured" as const, label: "ركن مميّز", icon: ChefHat },
+    { id: "slider" as const, label: "السلايدر", icon: ImageIcon },
     { id: "breaking" as const, label: "عاجل", icon: Zap },
+    { id: "blocked" as const, label: "محظور", icon: Ban },
     { id: "currency" as const, label: "عملات", icon: DollarSign },
     { id: "radio" as const, label: "راديو", icon: Radio },
     { id: "sources" as const, label: "المصادر", icon: Rss },
@@ -73,6 +81,10 @@ const AdminDashboard = () => {
         {tab === "analyzer" && <SourceAnalyzer />}
         {tab === "ai" && <AdminAI />}
         {tab === "debugger" && <SourceDebugger />}
+        {tab === "blocked" && <BlockedWordsManager />}
+        {tab === "slider" && <SliderManager />}
+        {tab === "trending" && <TrendingPanel />}
+        {tab === "featured" && <FeaturedSectionManager />}
       </div>
     </div>
   );
