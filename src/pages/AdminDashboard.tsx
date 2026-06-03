@@ -81,6 +81,10 @@ const AdminDashboard = () => {
         {tab === "analyzer" && <SourceAnalyzer />}
         {tab === "ai" && <AdminAI />}
         {tab === "debugger" && <SourceDebugger />}
+        {tab === "blocked" && <BlockedWordsManager />}
+        {tab === "slider" && <SliderManager />}
+        {tab === "trending" && <TrendingPanel />}
+        {tab === "featured" && <FeaturedSectionManager />}
       </div>
     </div>
   );
