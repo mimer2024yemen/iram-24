@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getBlockedWords, removeBlockedWords } from "@/lib/blockedWords";
 
 export interface Article {
   id: string;
