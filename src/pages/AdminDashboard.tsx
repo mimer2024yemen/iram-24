@@ -22,7 +22,7 @@ import { LogOut, Database, BarChart3, Rss, Search, PenSquare, Newspaper, Sparkle
 const AdminDashboard = () => {
   const { isAdmin, loading, logout } = useAdmin();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger" | "radio">("analytics");
+  const [tab, setTab] = useState<"analytics" | "news" | "sources" | "fetch" | "detector" | "analyzer" | "editor" | "ai" | "breaking" | "currency" | "debugger" | "radio" | "blocked" | "slider" | "trending" | "featured">("analytics");
 
   useEffect(() => {
     if (!loading && !isAdmin) navigate("/admin-dashboard-ERAM-SECURE/login");
