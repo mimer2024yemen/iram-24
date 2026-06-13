@@ -176,6 +176,110 @@ function parseFeed(xml: string, sourceName: string, sourceUrl: string, language:
   }).filter(Boolean) as ArticleRow[];
 }
 
+function getTag(block: string, tag: string): string {
+  const escaped = tag.replace(":", "\\:");
+  const re = new RegExp(`<${escaped}[^>]*>(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))<\\/${escaped}>`, "i");
+  const match = block.match(re);
+  return (match?.[1] || match?.[2] || "").trim();
+}
+
+function getAtomLink(block: string): string {
+  return block.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1] || "";
+}
+
+function extractImage(block: string): string | null {
+  const candidates = [
+    ...Array.from(block.matchAll(/<media:content[^>]+url=["']([^"']+)["'][^>]*>/gi)).map((m) => m[1]),
+    ...Array.from(block.matchAll(/<media:thumbnail[^>]+url=["']([^"']+)["'][^>]*>/gi)).map((m) => m[1]),
+    ...Array.from(block.matchAll(/<enclosure[^>]+url=["']([^"']+)["'][^>]*(?:type=["']image\//gi)).map((m) => m[1]),
+    ...Array.from(block.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi)).map((m) => m[1]),
+    ...Array.from(block.matchAll(/(?:https?:)?\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^\s"'<>]*)?/gi)).map((m) => m[0]),
+  ];
+  const image = candidates.map(normalizeUrl).find(Boolean);
+  return image || null;
+}
+
+function parseDate(value: string): string {
+  const time = value ? new Date(decodeEntities(value)).getTime() : NaN;
+  return new Date(Number.isFinite(time) ? time : Date.now()).toISOString();
+}
+
+function normalizeUrl(url: string): string {
+  let normalized = decodeEntities(url || "").trim().replace(/\s+/g, "");
+  if (normalized.startsWith("//")) normalized = `https:${normalized}`;
+  return normalized.replace(/^http:\/\//i, "https://");
+}
+
+function normalizeUrlKey(url: string): string {
+  try {
+    const parsed = new URL(normalizeUrl(url));
+    parsed.hash = "";
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "fbclid", "gclid"].forEach((p) => parsed.searchParams.delete(p));
+    return `${parsed.origin}${parsed.pathname.replace(/\/$/, "")}`.toLowerCase();
+  } catch { return normalizeUrl(url).toLowerCase(); }
+}
+
+function decodeEntities(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripHtml(html: string): string {
+  return (html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  return Math.abs(hash).toString(36);
+}
+
+function count(text: string, pattern: RegExp): number {
+  return text.match(pattern)?.length || 0;
+}
+
+function categorizeArticle(title: string, description: string | null, language: string): string {
+  const t = `${title} ${description || ""}`.toLowerCase();
+  if (language === "AR") {
+    const sports = count(t, /كرة|مباراة|دوري|بطولة|كأس|منتخب|نادي|هدف|لاعب|مدرب|رونالدو|ميسي|رياض/g);
+    const economy = count(t, /اقتصاد|مالي|بورصة|أسهم|نفط|دولار|ذهب|تضخم|بنك|استثمار|السوق|الأسواق|عملة/g);
+    const tech = count(t, /تكنولوج|تقني|ذكاء اصطناعي|هاتف|آيفون|سامسونغ|جوجل|مايكروسوفت|ميتا|إنترنت|تطبيق|فضاء/g);
+    const health = count(t, /صحة|طبي|مرض|علاج|دواء|فيروس|لقاح|مستشفى|سرطان|سكري/g);
+    const local = count(t, /اليمن|يمني|صنعاء|عدن|مأرب|تعز|حضرموت|الحديدة|الحوثي/g);
+    const arab = count(t, /سعود|الإمارات|مصر|الكويت|قطر|البحرين|عُمان|لبنان|سوري|عراق|أردن|فلسطين|المغرب|السودان/g);
+    const politics = count(t, /انتخاب|حكومة|رئيس|وزير|برلمان|قمة|حرب|غزة|إسرائيل|إيران|روسيا|أوكرانيا|ترامب|بايدن/g);
+    if (sports) return "رياضة";
+    if (economy) return "اقتصاد";
+    if (tech) return "تكنولوجيا";
+    if (health) return "صحة";
+    if (local) return "محلي";
+    if (arab) return "عربي";
+    if (politics) return "سياسة";
+    return "دولي";
+  }
+  if (count(t, /football|soccer|sports?|match|goal|tennis|basketball|olympic/g)) return "Sports";
+  if (count(t, /economy|market|stocks?|oil|gold|bank|inflation|dollar|finance/g)) return "Economy";
+  if (count(t, /technology|\btech\b|\bai\b|software|iphone|google|microsoft|internet|space/g)) return "Technology";
+  if (count(t, /health|medical|disease|vaccine|hospital|cancer|virus/g)) return "Health";
+  if (count(t, /election|government|president|war|military|politic|congress/g)) return "Politics";
+  return "World";
+}
+
 async function json(articles: ArticleRow[], meta: Record<string, unknown>, status = 200) {
   const body = JSON.stringify({ articles, ...meta, generated_at: new Date().toISOString() });
   // Try gzip if available in runtime
