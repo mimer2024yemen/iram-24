@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Ban, Loader2, Search } from "lucide-react";
-import { invalidateBlockedWordsCache } from "@/lib/blockedWords";
+import { invalidateBlockedWordsCache, persistBlockedWords } from "@/lib/blockedWords";
 
 interface BlockedWord { id: string; word: string; note: string | null; created_at: string; }
 
@@ -25,7 +25,9 @@ const BlockedWordsManager = () => {
       setWords((data as BlockedWord[]) || []);
     } catch (e: any) {
       console.error(e);
-      toast.error("الجدول غير جاهز بعد. يرجى الموافقة على migration الجداول.");
+      const local = JSON.parse(localStorage.getItem("eram_blocked_words_cache") || "[]") as string[];
+      setWords(local.map((word, index) => ({ id: `local-${index}-${word}`, word, note: "محفوظ محلياً", created_at: new Date().toISOString() })));
+      toast.warning("جدول الكلمات غير متاح حالياً، تم استخدام النسخة المحلية.");
     } finally { setLoading(false); }
   };
 
@@ -39,8 +41,12 @@ const BlockedWordsManager = () => {
     const { error } = await (supabase as any).from("blocked_words").insert({
       word: w, note: newNote.trim() || null,
     });
-    if (error) toast.error(error.message);
-    else {
+    if (error) {
+      const next = [...words.map(item => item.word), w];
+      persistBlockedWords(next);
+      setWords(next.map((word, index) => ({ id: `local-${index}-${word}`, word, note: "محفوظ محلياً", created_at: new Date().toISOString() })));
+      toast.success("تم حفظ الكلمة محلياً إلى حين جاهزية الجدول");
+    } else {
       toast.success("تمت الإضافة");
       setNewWord(""); setNewNote("");
       invalidateBlockedWordsCache();
@@ -51,6 +57,13 @@ const BlockedWordsManager = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("حذف هذه الكلمة؟")) return;
+    if (id.startsWith("local-")) {
+      const next = words.filter(item => item.id !== id).map(item => item.word);
+      persistBlockedWords(next);
+      setWords(next.map((word, index) => ({ id: `local-${index}-${word}`, word, note: "محفوظ محلياً", created_at: new Date().toISOString() })));
+      toast.success("تم الحذف محلياً");
+      return;
+    }
     const { error } = await (supabase as any).from("blocked_words").delete().eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("تم الحذف"); invalidateBlockedWordsCache(); load(); }
