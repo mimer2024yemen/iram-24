@@ -29,6 +29,7 @@ interface ArticleRow {
 }
 
 interface CacheEntry { data: ArticleRow[]; ts: number; mode: "db" | "rss"; }
+type QueryResult = { data?: ArticleRow[] | null; error?: { message?: string } | null } | null;
 const cache = new Map<string, CacheEntry>();
 const FRESH_TTL = 90_000;
 const STALE_TTL = 6 * 60 * 60_000;
@@ -108,9 +109,9 @@ async function fetchDbArticles(language: string, category: string, limit: number
   if (category && category !== "الرئيسية" && category !== "Home") q = q.eq("category", category);
 
   const timer = new Promise<null>((resolve) => setTimeout(() => resolve(null), DB_TIMEOUT_MS));
-  const result = await Promise.race([q, timer]);
-  if (!result || (result as any).error) throw new Error((result as any)?.error?.message || "db_timeout");
-  return ((result as any).data as ArticleRow[]) || [];
+  const result = await Promise.race([q, timer]) as QueryResult;
+  if (!result || result.error) throw new Error(result?.error?.message || "db_timeout");
+  return result.data || [];
 }
 
 async function refreshRssCache(key: string, language: string, category: string, limit: number) {
@@ -286,7 +287,7 @@ async function json(articles: ArticleRow[], meta: Record<string, unknown>, statu
   const body = JSON.stringify({ articles, ...meta, generated_at: new Date().toISOString() });
   // Try gzip if available in runtime
   try {
-    // @ts-ignore
+    // @ts-expect-error CompressionStream is available in the edge runtime before TS lib support here.
     if (typeof CompressionStream !== "undefined") {
       const stream = new Response(body).body!.pipeThrough(new CompressionStream("gzip"));
       return new Response(stream, {
