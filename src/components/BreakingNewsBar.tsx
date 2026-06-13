@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 
 interface BreakingNewsBarProps {
@@ -14,66 +13,50 @@ interface BreakingSettings {
   auto_refresh: boolean;
 }
 
+const DEFAULT_SETTINGS: BreakingSettings = {
+  is_active: true,
+  scroll_speed: 5,
+  scroll_direction: "rtl",
+  separator_style: "●",
+  auto_refresh: true,
+};
+
+async function fetchHomeHeadlines(language: "AR" | "EN") {
+  try {
+    const params = new URLSearchParams({ lang: language, limit: "10" });
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`, {
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      signal: AbortSignal.timeout(4200),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return ((json?.articles || []) as Array<{ title?: string }>).map((a) => decodeHtmlEntities(a.title || "")).filter(Boolean).slice(0, 10);
+  } catch { return []; }
+}
+
 const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
   const [headlines, setHeadlines] = useState<string[]>([]);
   const [settings, setSettings] = useState<BreakingSettings | null>(null);
 
   useEffect(() => {
     const fetchBreaking = async () => {
-      const { data } = await supabase
-        .from("articles")
-        .select("title")
-        .eq("language", language)
-        .eq("is_breaking", true)
-        .order("published_at", { ascending: false })
-        .limit(10);
-
-      if (!data || data.length === 0) {
-        const { data: latest } = await supabase
-          .from("articles")
-          .select("title")
-          .eq("language", language)
-          .order("published_at", { ascending: false })
-          .limit(5);
-        if (latest) setHeadlines(latest.map((a) => decodeHtmlEntities(a.title)));
-      } else {
-        setHeadlines(data.map((a) => decodeHtmlEntities(a.title)));
-      }
-    };
-
-    const fetchSettings = async () => {
-      const { data } = await supabase.from("breaking_news_settings").select("*").limit(1).single();
-      if (data) setSettings(data as any);
+      const latest = await fetchHomeHeadlines(language);
+      if (latest.length > 0) setHeadlines(latest);
     };
 
     fetchBreaking();
-    fetchSettings();
+    setSettings(DEFAULT_SETTINGS);
 
     const interval = setInterval(fetchBreaking, 30000);
-    const channel = supabase
-      .channel("breaking-settings-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "breaking_news_settings" }, () => fetchSettings())
-      .subscribe();
-
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+    return () => { clearInterval(interval); };
   }, [language]);
 
   if (!settings?.is_active && settings !== null) return null;
 
-  if (headlines.length === 0) {
-    return (
-      <div className="bg-primary overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2">
-          <span className="bg-background/20 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded shrink-0">
-            {language === "AR" ? "⚡ عاجل" : "⚡ BREAKING"}
-          </span>
-          <span className="text-primary-foreground text-xs">
-            {language === "AR" ? "جاري تحميل الأخبار..." : "Loading news..."}
-          </span>
-        </div>
-      </div>
-    );
-  }
+  if (headlines.length === 0) return null;
 
   const separator = settings?.separator_style || "●";
   const text = headlines.join(` ${separator} `);

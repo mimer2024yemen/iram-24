@@ -61,6 +61,21 @@ function writePersisted(key: string, data: Article[]) {
   } catch {}
 }
 
+export function getCachedArticleById(id: string): Article | null {
+  for (const entry of MEM_CACHE.values()) {
+    const found = entry.data.find((article) => article.id === id);
+    if (found) return found;
+  }
+  try {
+    for (const key of readLRU()) {
+      const parsed = readPersisted(key);
+      const found = parsed?.data.find((article) => article.id === id);
+      if (found) return found;
+    }
+  } catch {}
+  return null;
+}
+
 // (unused legacy helper removed)
 
 async function fetchEdgeDirect(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {
@@ -69,7 +84,7 @@ async function fetchEdgeDirect(language: string, category: string | undefined, l
     if (category && category !== "الرئيسية" && category !== "Home") params.set("category", category);
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 7000);
     const res = await fetch(url, {
       signal: ctrl.signal,
       headers: {
@@ -80,7 +95,8 @@ async function fetchEdgeDirect(language: string, category: string | undefined, l
     clearTimeout(timer);
     if (!res.ok) return null;
     const json = await res.json();
-    return (json?.articles as Article[]) || null;
+    const rows = (json?.articles as Article[]) || [];
+    return Array.isArray(rows) ? rows : null;
   } catch { return null; }
 }
 
@@ -92,7 +108,7 @@ async function fetchDirect(language: string, category: string | undefined, limit
     .order("published_at", { ascending: false })
     .limit(limit);
   if (category && category !== "الرئيسية" && category !== "Home") q = q.eq("category", category);
-  const timer = new Promise<null>((r) => setTimeout(() => r(null), 10_000));
+  const timer = new Promise<null>((r) => setTimeout(() => r(null), 3500));
   const result = await Promise.race([q, timer]);
   if (!result || (result as any).error) return null;
   return ((result as any).data as Article[]) || [];
@@ -112,12 +128,12 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 30
     const fetchArticles = async (showLoading: boolean) => {
       if (showLoading && articles.length === 0) setLoading(true);
 
-      // Try edge (cached) first → fall back to direct DB
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Try edge once (it has DB + RSS fallback), then one direct DB fallback.
+      for (let attempt = 0; attempt < 2; attempt++) {
         let data = await fetchEdgeDirect(language, category, limit);
-        if (!data) data = await fetchDirect(language, category, limit);
+        if ((!data || data.length === 0) && attempt === 0) data = await fetchDirect(language, category, limit);
         if (!alive) return;
-        if (data) {
+        if (data && data.length > 0) {
           // Apply blocked-words cleanup to title/description
           const blocked = await getBlockedWords();
           if (blocked.length > 0) {

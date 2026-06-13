@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo } from "@/lib/newsUtils";
 
@@ -14,23 +13,21 @@ const ManualArticlesSection = ({ language }: ManualArticlesSectionProps) => {
 
   useEffect(() => {
     const fetchManual = async () => {
-      const { data } = await supabase
-        .from("articles")
-        .select("*")
-        .eq("language", language)
-        .eq("is_manual", true)
-        .order("published_at", { ascending: false })
-        .limit(5);
-      if (data) setArticles(data as Article[]);
+      try {
+        const params = new URLSearchParams({ lang: language, limit: "20" });
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`, {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          signal: AbortSignal.timeout(4500),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setArticles((((json?.articles || []) as Article[]).filter((article) => article.is_manual)).slice(0, 5));
+      } catch { setArticles([]); }
     };
     fetchManual();
-
-    const channel = supabase
-      .channel(`manual-articles-${language}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => { fetchManual(); })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [language]);
 
   if (articles.length === 0) return null;

@@ -1,23 +1,25 @@
-import { supabase } from "@/integrations/supabase/client";
-
 // Shared blocked-words cache (5 min TTL)
 let cache: string[] = [];
 let lastFetch = 0;
 const TTL = 5 * 60 * 1000;
+const STORAGE_KEY = "eram_blocked_words_cache";
 
 export async function getBlockedWords(): Promise<string[]> {
   const now = Date.now();
   if (now - lastFetch < TTL && cache.length > 0) return cache;
   try {
-    const { data } = await (supabase as any).from("blocked_words").select("word");
-    cache = (data || [])
-      .map((d: any) => String(d.word || "").toLowerCase().trim().replace(/^#+/, ""))
+    cache = (JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as string[])
+      .map((word) => String(word || "").toLowerCase().trim().replace(/^#+/, ""))
       .filter(Boolean);
     lastFetch = now;
-  } catch {
-    /* table may not exist yet */
-  }
+  } catch { cache = []; }
   return cache;
+}
+
+export function persistBlockedWords(words: string[]): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch { cache = words; }
+  cache = words;
+  lastFetch = Date.now();
 }
 
 export function invalidateBlockedWordsCache(): void {
