@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Article } from "@/hooks/useArticles";
+import { Article, getCachedArticleById } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
 import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Bookmark, Share2 } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
@@ -95,20 +95,27 @@ const ArticlePage = () => {
       setRelatedArticles([]);
       setSourceInfo(null);
       setImgError(false);
-      const { data } = await supabase.from("articles").select("*").eq("id", id).single();
+      const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
+      const result = await Promise.race([
+        supabase.from("articles").select("*").eq("id", id).maybeSingle(),
+        timer,
+      ]);
+      const data = result.data || getCachedArticleById(id);
       if (data) {
         setArticle(data as any);
-        supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id).then(() => {});
-        if (data.source_id) {
+        if (!id.startsWith("rss-")) supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id).then(() => {});
+        if (data.source_id && !id.startsWith("rss-")) {
           const { data: src } = await supabase.from("news_sources")
             .select("name, website_url, url, show_source, alt_source_name, alt_source_url")
-            .eq("id", data.source_id).single();
+            .eq("id", data.source_id).maybeSingle();
           if (src) setSourceInfo(src as any);
         }
-        const { data: related } = await supabase.from("articles").select("*")
-          .eq("category", data.category).eq("language", data.language)
-          .neq("id", id).order("published_at", { ascending: false }).limit(6);
-        if (related) setRelatedArticles(related as any);
+        if (!id.startsWith("rss-")) {
+          const { data: related } = await supabase.from("articles").select("*")
+            .eq("category", data.category).eq("language", data.language)
+            .neq("id", id).order("published_at", { ascending: false }).limit(6);
+          if (related) setRelatedArticles(related as any);
+        }
       }
       setLoading(false);
     };
