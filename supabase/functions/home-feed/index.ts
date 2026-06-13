@@ -1,17 +1,57 @@
-// Long-term free-tier performance: cache home feed in edge memory for 60s,
-// serve with strong Cache-Control so browsers/CDN reuse responses.
-// Even if the DB briefly times out, the last good payload is served.
-
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+// Resilient home feed: DB first, stale cache second, live RSS fallback third.
+// The homepage must never go blank because of database latency or free-tier cold starts.
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const COLS =
   "id,title,description,url,image_url,category,language,published_at,views,source_id,created_at,author_name,author_image_url,is_manual";
 
-interface CacheEntry { data: unknown; ts: number; }
+interface ArticleRow {
+  id: string;
+  title: string;
+  description: string | null;
+  content: string | null;
+  url: string;
+  image_url: string | null;
+  category: string;
+  language: string;
+  published_at: string | null;
+  views: number | null;
+  source_id: string | null;
+  created_at: string;
+  author_name: string | null;
+  author_image_url: string | null;
+  is_manual: boolean;
+}
+
+interface CacheEntry { data: ArticleRow[]; ts: number; mode: "db" | "rss"; }
 const cache = new Map<string, CacheEntry>();
-const FRESH_TTL = 60_000;        // serve directly from cache for 60s
-const STALE_TTL = 30 * 60_000;   // serve stale up to 30 min if DB is failing
+const FRESH_TTL = 90_000;
+const STALE_TTL = 6 * 60 * 60_000;
+const DB_TIMEOUT_MS = 2400;
+
+const REQUEST_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+  "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+  "Accept": "application/rss+xml, application/xml, text/xml, text/html;q=0.8, */*;q=0.7",
+};
+
+const FEEDS: Record<string, Array<{ name: string; url: string }>> = {
+  AR: [
+    { name: "BBC عربي", url: "https://feeds.bbci.co.uk/arabic/rss.xml" },
+    { name: "سكاي نيوز عربية", url: "https://www.skynewsarabia.com/rss" },
+    { name: "فرانس 24", url: "https://www.france24.com/ar/rss" },
+    { name: "CNN عربية", url: "https://arabic.cnn.com/rss" },
+  ],
+  EN: [
+    { name: "BBC News", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { name: "The Guardian", url: "https://www.theguardian.com/world/rss" },
+  ],
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
