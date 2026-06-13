@@ -17,7 +17,7 @@ export async function getBlockedWords(): Promise<string[]> {
 }
 
 export function persistBlockedWords(words: string[]): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(words)); } catch { cache = words; }
   cache = words;
   lastFetch = Date.now();
 }
