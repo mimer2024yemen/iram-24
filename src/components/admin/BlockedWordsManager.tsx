@@ -5,6 +5,14 @@ import { Plus, Trash2, Ban, Loader2, Search } from "lucide-react";
 import { invalidateBlockedWordsCache, persistBlockedWords } from "@/lib/blockedWords";
 
 interface BlockedWord { id: string; word: string; note: string | null; created_at: string; }
+type BlockedWordsClient = {
+  from: (table: "blocked_words") => {
+    select: (columns: string) => { order: (column: string, options: { ascending: boolean }) => Promise<{ data: BlockedWord[] | null; error: { message: string } | null }> };
+    insert: (payload: { word: string; note: string | null }) => Promise<{ error: { message: string } | null }>;
+    delete: () => { eq: (column: "id", value: string) => Promise<{ error: { message: string } | null }> };
+  };
+};
+const blockedWordsClient = supabase as unknown as BlockedWordsClient;
 
 const BlockedWordsManager = () => {
   const [words, setWords] = useState<BlockedWord[]>([]);
@@ -17,13 +25,13 @@ const BlockedWordsManager = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await blockedWordsClient
         .from("blocked_words")
         .select("id, word, note, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       setWords((data as BlockedWord[]) || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       const local = JSON.parse(localStorage.getItem("eram_blocked_words_cache") || "[]") as string[];
       setWords(local.map((word, index) => ({ id: `local-${index}-${word}`, word, note: "محفوظ محلياً", created_at: new Date().toISOString() })));
@@ -38,7 +46,7 @@ const BlockedWordsManager = () => {
     const w = newWord.trim().replace(/^#+/, "");
     if (!w) return;
     setAdding(true);
-    const { error } = await (supabase as any).from("blocked_words").insert({
+    const { error } = await blockedWordsClient.from("blocked_words").insert({
       word: w, note: newNote.trim() || null,
     });
     if (error) {
@@ -64,7 +72,7 @@ const BlockedWordsManager = () => {
       toast.success("تم الحذف محلياً");
       return;
     }
-    const { error } = await (supabase as any).from("blocked_words").delete().eq("id", id);
+    const { error } = await blockedWordsClient.from("blocked_words").delete().eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success("تم الحذف"); invalidateBlockedWordsCache(); load(); }
   };
