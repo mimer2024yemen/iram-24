@@ -9,7 +9,9 @@ export async function getBlockedWords(): Promise<string[]> {
   const now = Date.now();
   if (now - lastFetch < TTL && cache.length > 0) return cache;
   try {
-    const { data } = await (supabase as any).from("blocked_words").select("word");
+    const query = (supabase as any).from("blocked_words").select("word");
+    const timeout = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 900));
+    const { data } = await Promise.race([query, timeout]);
     cache = (data || [])
       .map((d: any) => String(d.word || "").toLowerCase().trim().replace(/^#+/, ""))
       .filter(Boolean);
