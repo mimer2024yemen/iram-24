@@ -131,17 +131,19 @@ async function fetchRssArticles(language: string, category: string, limit: numbe
   );
 
   const seen = new Set<string>();
-  const merged = results
+  const all = results
     .flatMap((r) => r.status === "fulfilled" ? r.value : [])
     .filter((a) => {
       const key = normalizeUrlKey(a.url) || a.title.toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
-      if (category && category !== "الرئيسية" && category !== "Home") return a.category === category;
       return true;
     })
-    .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
-    .slice(0, limit);
+    .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime());
+
+  const wantsCategory = category && category !== "الرئيسية" && category !== "Home";
+  const filtered = wantsCategory ? all.filter((a) => a.category === category) : all;
+  const merged = (filtered.length > 0 ? filtered : all).slice(0, limit);
 
   return merged;
 }
