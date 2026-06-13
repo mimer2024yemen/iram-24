@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 
 interface BreakingNewsBarProps {
@@ -44,39 +43,15 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
 
   useEffect(() => {
     const fetchBreaking = async () => {
-      const dbQuery = supabase
-        .from("articles")
-        .select("title")
-        .eq("language", language)
-        .eq("is_breaking", true)
-        .order("published_at", { ascending: false })
-        .limit(10);
-      const { data } = await Promise.race([dbQuery, new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 1600))]);
-
-      if (!data || data.length === 0) {
-        const latest = await fetchHomeHeadlines(language);
-        if (latest.length > 0) setHeadlines(latest);
-      } else {
-        setHeadlines(data.map((a) => decodeHtmlEntities(a.title)));
-      }
-    };
-
-    const fetchSettings = async () => {
-      const query = supabase.from("breaking_news_settings").select("*").limit(1).maybeSingle();
-      const { data } = await Promise.race([query, new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 900))]);
-      setSettings(data ? data as BreakingSettings : DEFAULT_SETTINGS);
+      const latest = await fetchHomeHeadlines(language);
+      if (latest.length > 0) setHeadlines(latest);
     };
 
     fetchBreaking();
-    fetchSettings();
+    setSettings(DEFAULT_SETTINGS);
 
     const interval = setInterval(fetchBreaking, 30000);
-    const channel = supabase
-      .channel("breaking-settings-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "breaking_news_settings" }, () => fetchSettings())
-      .subscribe();
-
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+    return () => { clearInterval(interval); };
   }, [language]);
 
   if (!settings?.is_active && settings !== null) return null;
