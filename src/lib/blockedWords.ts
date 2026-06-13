@@ -4,16 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 let cache: string[] = [];
 let lastFetch = 0;
 const TTL = 5 * 60 * 1000;
+type BlockedWordRow = { word?: string | null };
+type BlockedWordsClient = {
+  from: (table: "blocked_words") => {
+    select: (columns: "word") => PromiseLike<{ data: BlockedWordRow[] | null }>;
+  };
+};
 
 export async function getBlockedWords(): Promise<string[]> {
   const now = Date.now();
   if (now - lastFetch < TTL && cache.length > 0) return cache;
   try {
-    const query = (supabase as any).from("blocked_words").select("word");
+    const query = (supabase as unknown as BlockedWordsClient).from("blocked_words").select("word");
     const timeout = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 900));
     const { data } = await Promise.race([query, timeout]);
     cache = (data || [])
-      .map((d: any) => String(d.word || "").toLowerCase().trim().replace(/^#+/, ""))
+      .map((d) => String(d.word || "").toLowerCase().trim().replace(/^#+/, ""))
       .filter(Boolean);
     lastFetch = now;
   } catch {
