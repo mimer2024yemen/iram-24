@@ -146,7 +146,7 @@ async function fetchRssArticles(language: string, category: string, limit: numbe
   return merged;
 }
 
-function parseFeed(xml: string, sourceName: string, sourceUrl: string, language: string): ArticleRow[] {
+function parseFeed(xml: string, sourceName: string, _sourceUrl: string, language: string): ArticleRow[] {
   const blocks = Array.from(xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)).map((m) => m[2]);
   return blocks.map((block, index) => {
     const title = decodeEntities(getTag(block, "title"));
@@ -191,7 +191,7 @@ function extractImage(block: string): string | null {
   const candidates = [
     ...Array.from(block.matchAll(/<media:content[^>]+url=["']([^"']+)["'][^>]*>/gi)).map((m) => m[1]),
     ...Array.from(block.matchAll(/<media:thumbnail[^>]+url=["']([^"']+)["'][^>]*>/gi)).map((m) => m[1]),
-    ...Array.from(block.matchAll(/<enclosure[^>]+url=["']([^"']+)["'][^>]*(?:type=["']image\//gi)).map((m) => m[1]),
+    ...Array.from(block.matchAll(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^"']*)?)["'][^>]*>/gi)).map((m) => m[1]),
     ...Array.from(block.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi)).map((m) => m[1]),
     ...Array.from(block.matchAll(/(?:https?:)?\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^\s"'<>]*)?/gi)).map((m) => m[0]),
   ];
