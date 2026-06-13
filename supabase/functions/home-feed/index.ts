@@ -120,6 +120,62 @@ async function refreshRssCache(key: string, language: string, category: string, 
   } catch (_) { /* background refresh only */ }
 }
 
+async function fetchRssArticles(language: string, category: string, limit: number): Promise<ArticleRow[]> {
+  const feeds = FEEDS[language] || FEEDS.AR;
+  const results = await Promise.allSettled(
+    feeds.map(async (feed) => {
+      const res = await fetch(feed.url, { headers: REQUEST_HEADERS, signal: AbortSignal.timeout(3800) });
+      if (!res.ok) throw new Error(`${feed.name}:${res.status}`);
+      return parseFeed(await res.text(), feed.name, feed.url, language);
+    })
+  );
+
+  const seen = new Set<string>();
+  const merged = results
+    .flatMap((r) => r.status === "fulfilled" ? r.value : [])
+    .filter((a) => {
+      const key = normalizeUrlKey(a.url) || a.title.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      if (category && category !== "الرئيسية" && category !== "Home") return a.category === category;
+      return true;
+    })
+    .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
+    .slice(0, limit);
+
+  return merged;
+}
+
+function parseFeed(xml: string, sourceName: string, sourceUrl: string, language: string): ArticleRow[] {
+  const blocks = Array.from(xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)).map((m) => m[2]);
+  return blocks.map((block, index) => {
+    const title = decodeEntities(getTag(block, "title"));
+    const link = normalizeUrl(getTag(block, "link") || getAtomLink(block));
+    if (!title || !link) return null;
+    const rawSummary = getTag(block, "description") || getTag(block, "summary") || getTag(block, "content") || getTag(block, "content:encoded");
+    const description = stripHtml(decodeEntities(rawSummary)).slice(0, 320) || null;
+    const published = parseDate(getTag(block, "pubDate") || getTag(block, "published") || getTag(block, "updated"));
+    const image = extractImage(block);
+    return {
+      id: `rss-${hashString(`${sourceName}-${link}-${index}`)}`,
+      title,
+      description,
+      content: rawSummary ? decodeEntities(rawSummary) : description,
+      url: link,
+      image_url: image,
+      category: categorizeArticle(title, description, language),
+      language,
+      published_at: published,
+      views: 0,
+      source_id: null,
+      created_at: published || new Date().toISOString(),
+      author_name: sourceName,
+      author_image_url: null,
+      is_manual: false,
+    } satisfies ArticleRow;
+  }).filter(Boolean) as ArticleRow[];
+}
+
 async function json(articles: ArticleRow[], meta: Record<string, unknown>, status = 200) {
   const body = JSON.stringify({ articles, ...meta, generated_at: new Date().toISOString() });
   // Try gzip if available in runtime
