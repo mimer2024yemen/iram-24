@@ -65,49 +65,63 @@ Deno.serve(async (req) => {
 
   const cached = cache.get(key);
   if (cached && now - cached.ts < FRESH_TTL) {
-    return await json(cached.data, true);
+    return await json(cached.data, { cached: true, mode: cached.mode });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } }
-    );
-
-    let q = supabase
-      .from("articles")
-      .select(COLS)
-      .eq("language", language)
-      .order("published_at", { ascending: false })
-      .limit(limit);
-    if (category && category !== "الرئيسية" && category !== "Home") {
-      q = q.eq("category", category);
+    const data = await fetchDbArticles(language, category, limit);
+    if (data.length > 0) {
+      cache.set(key, { data, ts: now, mode: "db" });
+      return await json(data, { cached: false, mode: "db" });
     }
-
-    // 8s timeout
-    const timer = new Promise<null>((r) => setTimeout(() => r(null), 8000));
-    const result = await Promise.race([q, timer]);
-    if (!result || (result as any).error || !(result as any).data) {
-      throw new Error("db_unavailable");
-    }
-    const data = (result as any).data;
-    cache.set(key, { data, ts: now });
-    return await json(data, false);
-  } catch (_err) {
-    // Fall back to stale cache if we still have it
-    if (cached && now - cached.ts < STALE_TTL) {
-      return await json(cached.data, true, true);
-    }
-    return new Response(JSON.stringify({ error: "unavailable", articles: [] }), {
-      status: 503,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (err) {
+    console.error("home-feed-db", err instanceof Error ? err.message : String(err));
   }
+
+  if (cached && now - cached.ts < STALE_TTL) {
+    void refreshRssCache(key, language, category, limit);
+    return await json(cached.data, { cached: true, stale: true, mode: cached.mode });
+  }
+
+  const fallback = await fetchRssArticles(language, category, limit);
+  if (fallback.length > 0) {
+    cache.set(key, { data: fallback, ts: now, mode: "rss" });
+    return await json(fallback, { cached: false, fallback: true, mode: "rss" });
+  }
+
+  return await json([], { cached: false, stale: true, mode: "empty" });
 });
 
-async function json(articles: unknown, cached: boolean, stale = false) {
-  const body = JSON.stringify({ articles, cached, stale });
+async function fetchDbArticles(language: string, category: string, limit: number): Promise<ArticleRow[]> {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } }
+  );
+
+  let q = supabase
+    .from("articles")
+    .select(COLS)
+    .eq("language", language)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (category && category !== "الرئيسية" && category !== "Home") q = q.eq("category", category);
+
+  const timer = new Promise<null>((resolve) => setTimeout(() => resolve(null), DB_TIMEOUT_MS));
+  const result = await Promise.race([q, timer]);
+  if (!result || (result as any).error) throw new Error((result as any)?.error?.message || "db_timeout");
+  return ((result as any).data as ArticleRow[]) || [];
+}
+
+async function refreshRssCache(key: string, language: string, category: string, limit: number) {
+  try {
+    const data = await fetchRssArticles(language, category, limit);
+    if (data.length > 0) cache.set(key, { data, ts: Date.now(), mode: "rss" });
+  } catch (_) { /* background refresh only */ }
+}
+
+async function json(articles: ArticleRow[], meta: Record<string, unknown>, status = 200) {
+  const body = JSON.stringify({ articles, ...meta, generated_at: new Date().toISOString() });
   // Try gzip if available in runtime
   try {
     // @ts-ignore
