@@ -160,6 +160,11 @@
 }
 
 /* === Keyframes === */
+/* Seamless marquee: requires duplicated content inside the track (two copies).
+   Going from 0 → -50% lands exactly on the start of the second copy => no gap. */
+@keyframes marquee-rtl { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes marquee-ltr { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+/* Legacy single-copy fallback (kept for any usage that doesn't duplicate content) */
 @keyframes ticker-rtl { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 @keyframes ticker-ltr { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 @keyframes pulse-live { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
