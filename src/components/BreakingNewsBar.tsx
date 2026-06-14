@@ -59,11 +59,14 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
   if (headlines.length === 0) return null;
 
   const separator = settings?.separator_style || "●";
-  const text = headlines.join(` ${separator} `);
-  const speed = settings?.scroll_speed || 5;
+  const text = headlines.join(`   ${separator}   `);
   const direction = settings?.scroll_direction || "rtl";
   const isRTL = direction === "rtl";
-  const animationClass = direction === "ltr" ? "animate-ticker-ltr" : "animate-ticker-rtl";
+  const animationClass = direction === "ltr" ? "animate-marquee-ltr" : "animate-marquee-rtl";
+
+  // Natural speed: ~22 chars/sec (like Reuters/BBC tickers). Clamp 30s–120s.
+  const charsPerSecond = 22;
+  const duration = Math.min(120, Math.max(30, Math.round(text.length / charsPerSecond)));
 
   return (
     <div className="bg-primary overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
@@ -73,8 +76,12 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
           {language === "AR" ? "عاجل" : "BREAKING"}
         </span>
         <div className="overflow-hidden flex-1 min-w-0">
-          <div className={`whitespace-nowrap ${animationClass}`} style={{ animationDuration: `${speed * 3}s` }}>
-            <span className="text-primary-foreground text-xs">{text}</span>
+          <div
+            className={`flex w-max whitespace-nowrap marquee-track ${animationClass}`}
+            style={{ ["--marquee-duration" as string]: `${duration}s` }}
+          >
+            <span className="text-primary-foreground text-xs px-4">{text}</span>
+            <span className="text-primary-foreground text-xs px-4" aria-hidden="true">{text}</span>
           </div>
         </div>
       </div>
