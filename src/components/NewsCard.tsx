@@ -47,27 +47,46 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
   const hasImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
 
-  // Featured — premium full-bleed
+  // Featured — premium full-bleed (only when image exists)
   if (variant === "featured") {
+    if (!hasImage) {
+      // Text-only editorial featured card — no empty image frame.
+      return (
+        <article
+          className="relative overflow-hidden cursor-pointer group rounded-2xl shadow-luxe hover-lift bg-gradient-to-br from-[hsl(220_45%_12%)] to-[hsl(var(--navy-deep))] p-5 md:p-7 flex flex-col justify-between min-h-[180px]"
+          onClick={goToArticle}
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <span className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] mb-3">
+            {article.category}
+          </span>
+          <h2 className="font-display text-lg md:text-2xl text-white leading-tight line-clamp-4 group-hover:text-[hsl(var(--gold-soft))] transition-colors">
+            {title}
+          </h2>
+          {article.description && (
+            <p className="text-white/70 text-sm mt-3 line-clamp-2">{decodeHtmlEntities(article.description)}</p>
+          )}
+          <div className="flex items-center gap-3 text-[10px] text-white/60 mt-4 uppercase tracking-wider">
+            <span className="flex items-center gap-1"><Clock size={11} />{timeAgo(article.published_at, language)}</span>
+          </div>
+        </article>
+      );
+    }
     return (
       <article
         className="relative overflow-hidden cursor-pointer group rounded-2xl shadow-luxe hover-lift bg-[hsl(var(--navy-deep))]"
         onClick={goToArticle}
         dir={isRTL ? "rtl" : "ltr"}
       >
-        {hasImage ? (
-          <div className="aspect-[16/10] overflow-hidden">
-            <LazyImage
-              src={imgSrc}
-              alt={title}
-              className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
-              loading="eager"
-              onError={() => setImgError(true)}
-            />
-          </div>
-        ) : (
-          <div className="aspect-[16/10] bg-gradient-to-br from-[hsl(220_45%_12%)] to-[hsl(var(--navy-deep))]" />
-        )}
+        <div className="aspect-[16/10] overflow-hidden">
+          <LazyImage
+            src={imgSrc}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
+            loading="eager"
+            onError={() => setImgError(true)}
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))] via-[hsl(var(--navy-deep))]/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
           <span className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] mb-2">
