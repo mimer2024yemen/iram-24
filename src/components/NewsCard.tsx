@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { normalizeImageUrl } from "@/lib/contentParser";
 import LazyImage from "@/components/LazyImage";
+import { categoryStyle } from "@/lib/categoryColors";
 
 interface NewsCardProps {
   article: Article;
@@ -13,6 +14,35 @@ interface NewsCardProps {
   variant?: "featured" | "medium" | "compact";
   onBeforeNavigate?: () => void;
 }
+
+// Branded gradient placeholder rendered when an article has no image
+const GradientPlaceholder = ({
+  category,
+  title,
+  className = "",
+}: { category: string; title?: string; className?: string }) => {
+  const s = categoryStyle(category);
+  return (
+    <div
+      className={`w-full h-full flex flex-col items-center justify-center text-center p-3 ${className}`}
+      style={{ background: s.gradient }}
+      aria-hidden="true"
+    >
+      <span className="text-3xl md:text-4xl opacity-90 mb-1 drop-shadow-sm">{s.emoji}</span>
+      <span
+        className="text-[9px] md:text-[10px] tracking-[0.3em] uppercase font-bold text-white/85"
+        style={{ textShadow: "0 1px 4px rgba(0,0,0,.45)" }}
+      >
+        {category}
+      </span>
+      {title && (
+        <span className="text-[10px] text-white/55 mt-1 line-clamp-2 max-w-[90%] hidden md:block">
+          {title}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: NewsCardProps) => {
   const [favs, setFavs] = useState(getFavorites());
@@ -47,31 +77,8 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
   const hasImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
 
-  // Featured — premium full-bleed (only when image exists)
+  // Featured — premium full-bleed
   if (variant === "featured") {
-    if (!hasImage) {
-      // Text-only editorial featured card — no empty image frame.
-      return (
-        <article
-          className="relative overflow-hidden cursor-pointer group rounded-2xl shadow-luxe hover-lift bg-gradient-to-br from-[hsl(220_45%_12%)] to-[hsl(var(--navy-deep))] p-5 md:p-7 flex flex-col justify-between min-h-[180px]"
-          onClick={goToArticle}
-          dir={isRTL ? "rtl" : "ltr"}
-        >
-          <span className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] mb-3">
-            {article.category}
-          </span>
-          <h2 className="font-display text-lg md:text-2xl text-white leading-tight line-clamp-4 group-hover:text-[hsl(var(--gold-soft))] transition-colors">
-            {title}
-          </h2>
-          {article.description && (
-            <p className="text-white/70 text-sm mt-3 line-clamp-2">{decodeHtmlEntities(article.description)}</p>
-          )}
-          <div className="flex items-center gap-3 text-[10px] text-white/60 mt-4 uppercase tracking-wider">
-            <span className="flex items-center gap-1"><Clock size={11} />{timeAgo(article.published_at, language)}</span>
-          </div>
-        </article>
-      );
-    }
     return (
       <article
         className="relative overflow-hidden cursor-pointer group rounded-2xl shadow-luxe hover-lift bg-[hsl(var(--navy-deep))]"
@@ -79,13 +86,18 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
         dir={isRTL ? "rtl" : "ltr"}
       >
         <div className="aspect-[16/10] overflow-hidden">
-          <LazyImage
-            src={imgSrc}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
-            loading="eager"
-            onError={() => setImgError(true)}
-          />
+          {hasImage ? (
+            <LazyImage
+              src={imgSrc}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
+              loading="eager"
+              onError={() => setImgError(true)}
+              fallback={<GradientPlaceholder category={article.category} />}
+            />
+          ) : (
+            <GradientPlaceholder category={article.category} />
+          )}
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))] via-[hsl(var(--navy-deep))]/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
@@ -103,7 +115,7 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
     );
   }
 
-  // Medium — premium editorial card
+  // Medium — editorial card
   if (variant === "medium") {
     return (
       <article
@@ -111,27 +123,23 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
         onClick={goToArticle}
         dir={isRTL ? "rtl" : "ltr"}
       >
-        {hasImage ? (
-          <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-[hsl(var(--navy-mid))] mb-3 relative shadow-luxe">
+        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-[hsl(var(--navy-mid))] mb-3 relative shadow-luxe">
+          {hasImage ? (
             <LazyImage
               src={imgSrc}
               alt={title}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               onError={() => setImgError(true)}
+              fallback={<GradientPlaceholder category={article.category} title={title} />}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <span className="absolute top-2.5 start-2.5 text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] bg-[hsl(var(--navy-deep))]/80 backdrop-blur px-2.5 py-1 rounded-full border border-[hsl(var(--gold))]/30">
-              {article.category}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))]">
-              {article.category}
-            </span>
-            <span className="h-px flex-1 bg-foreground/15" />
-          </div>
-        )}
+          ) : (
+            <GradientPlaceholder category={article.category} title={title} />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <span className="absolute top-2.5 start-2.5 text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] bg-[hsl(var(--navy-deep))]/80 backdrop-blur px-2.5 py-1 rounded-full border border-[hsl(var(--gold))]/30">
+            {article.category}
+          </span>
+        </div>
         <h3 className="font-display text-[15px] md:text-base text-foreground leading-snug line-clamp-3 group-hover:text-[hsl(var(--gold))] transition-colors flex-1">
           {title}
         </h3>
@@ -162,11 +170,19 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
       dir={isRTL ? "rtl" : "ltr"}
       onClick={goToArticle}
     >
-      {hasImage && (
-        <div className="w-24 h-24 md:w-28 md:h-28 rounded-lg overflow-hidden bg-[hsl(var(--navy-mid))] shrink-0 shadow-luxe">
-          <LazyImage src={imgSrc} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onError={() => setImgError(true)} />
-        </div>
-      )}
+      <div className="w-24 h-24 md:w-28 md:h-28 rounded-lg overflow-hidden bg-[hsl(var(--navy-mid))] shrink-0 shadow-luxe">
+        {hasImage ? (
+          <LazyImage
+            src={imgSrc}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={() => setImgError(true)}
+            fallback={<GradientPlaceholder category={article.category} />}
+          />
+        ) : (
+          <GradientPlaceholder category={article.category} />
+        )}
+      </div>
       <div className="flex flex-col justify-between flex-1 min-w-0">
         <div>
           <span className="text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))]">{article.category}</span>
