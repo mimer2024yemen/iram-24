@@ -114,9 +114,23 @@ async function fetchDirect(language: string, category: string | undefined, limit
   return ((result as any).data as Article[]) || [];
 }
 
+// Find any cached entry for the same language+category with >= limit, slice it.
+function findRelatedCache(language: string, category: string | undefined, limit: number) {
+  const prefix = `${language}|${category || ""}|`;
+  let best: { data: Article[]; ts: number } | null = null;
+  for (const [k, v] of MEM_CACHE) {
+    if (k.startsWith(prefix) && v.data.length >= limit) {
+      if (!best || v.ts > best.ts) best = v;
+    }
+  }
+  return best;
+}
+
 export function useArticles(language: "AR" | "EN", category?: string, limit = 30) {
   const cacheKey = `${language}|${category || ""}|${limit}`;
-  const initial = MEM_CACHE.get(cacheKey) || readPersisted(cacheKey);
+  const initial = MEM_CACHE.get(cacheKey) || findRelatedCache(language, category, limit) || readPersisted(cacheKey);
+
+
 
   const [articles, setArticles] = useState<Article[]>(initial?.data || []);
   const [loading, setLoading] = useState(!initial);
