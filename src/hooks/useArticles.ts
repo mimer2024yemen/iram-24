@@ -118,7 +118,7 @@ async function fetchDirect(language: string, category: string | undefined, limit
 function findRelatedCache(language: string, category: string | undefined, limit: number) {
   const prefix = `${language}|${category || ""}|`;
   let best: { data: Article[]; ts: number } | null = null;
-  for (const [k, v] of MEM_CACHE) {
+  for (const [k, v] of MEM_CACHE.entries()) {
     if (k.startsWith(prefix) && v.data.length >= limit) {
       if (!best || v.ts > best.ts) best = v;
     }
