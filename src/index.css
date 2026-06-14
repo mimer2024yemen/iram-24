@@ -207,6 +207,9 @@
 
 .animate-ticker-rtl { animation: ticker-rtl 40s linear infinite; }
 .animate-ticker-ltr { animation: ticker-ltr 40s linear infinite; }
+.animate-marquee-rtl { animation: marquee-rtl var(--marquee-duration, 60s) linear infinite; will-change: transform; }
+.animate-marquee-ltr { animation: marquee-ltr var(--marquee-duration, 60s) linear infinite; will-change: transform; }
+.marquee-track:hover { animation-play-state: paused; }
 .animate-pulse-live { animation: pulse-live 1.5s ease-in-out infinite; }
 .animate-fade-up { animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-fade-in { animation: fade-in 0.5s ease-out both; }
