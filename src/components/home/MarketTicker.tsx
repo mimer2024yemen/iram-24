@@ -40,7 +40,6 @@ const MarketTicker = ({ language }: Props) => {
 
   if (quotes.length === 0) return null;
 
-  const loop = [...quotes, ...quotes];
 
   return (
     <div
