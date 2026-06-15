@@ -40,7 +40,6 @@ const MarketTicker = ({ language }: Props) => {
 
   if (quotes.length === 0) return null;
 
-  const loop = [...quotes, ...quotes];
 
   return (
     <div
@@ -63,30 +62,34 @@ const MarketTicker = ({ language }: Props) => {
         {/* Scrolling track */}
         <div className="flex-1 overflow-hidden relative">
           <div
-            className="flex items-center gap-7 whitespace-nowrap py-2 animate-ticker-scroll"
-            style={{ animationDuration: `${Math.max(50, quotes.length * 5)}s`, animationDirection: isRTL ? "reverse" : "normal" }}
+            className={`flex w-max marquee-track ${isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr"}`}
+            style={{ ["--marquee-duration" as string]: `${Math.max(30, Math.min(55, quotes.length * 2.5))}s` }}
           >
-            {loop.map((q, i) => {
-              const up = q.change >= 0;
-              const label = isRTL ? q.label_ar : q.label_en;
-              return (
-                <span key={`${q.symbol}-${i}`} className="flex items-center gap-2 text-[12px] md:text-[13px] tabular-nums">
-                  <span className="text-white/90 font-bold tracking-wide">{label}</span>
-                  <span className="text-white font-display font-semibold">
-                    {q.unit}{formatNum(q.price)}
-                  </span>
-                  <span
-                    className={`flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded ${
-                      up ? "text-emerald-300 bg-emerald-500/10" : "text-rose-300 bg-rose-500/10"
-                    }`}
-                  >
-                    {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                    {up ? "+" : ""}{q.changePct.toFixed(2)}%
-                  </span>
-                  <span className="text-[hsl(var(--gold))]/40">•</span>
-                </span>
-              );
-            })}
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex items-center gap-7 whitespace-nowrap py-2 px-3 shrink-0" aria-hidden={copy === 1}>
+                {quotes.map((q, i) => {
+                  const up = q.change >= 0;
+                  const label = isRTL ? q.label_ar : q.label_en;
+                  return (
+                    <span key={`${copy}-${q.symbol}-${i}`} className="flex items-center gap-2 text-[12px] md:text-[13px] tabular-nums">
+                      <span className="text-white/90 font-bold tracking-wide">{label}</span>
+                      <span className="text-white font-display font-semibold">
+                        {q.unit}{formatNum(q.price)}
+                      </span>
+                      <span
+                        className={`flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded ${
+                          up ? "text-emerald-300 bg-emerald-500/10" : "text-rose-300 bg-rose-500/10"
+                        }`}
+                      >
+                        {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        {up ? "+" : ""}{q.changePct.toFixed(2)}%
+                      </span>
+                      <span className="text-[hsl(var(--gold))]/40">•</span>
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
           </div>
           {/* Edge fades */}
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[hsl(220_50%_5%)] to-transparent" />
