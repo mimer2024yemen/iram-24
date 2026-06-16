@@ -1,7 +1,8 @@
-import { Heart, Share2, Clock, ArrowUpRight } from "lucide-react";
+import { Heart, Share2, Clock, ArrowUpRight, Zap } from "lucide-react";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo, toggleFavorite, getFavorites, decodeHtmlEntities } from "@/lib/newsUtils";
-import { useState } from "react";
+import { classify, normalizeCategory } from "@/lib/classifier";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { normalizeImageUrl } from "@/lib/contentParser";
