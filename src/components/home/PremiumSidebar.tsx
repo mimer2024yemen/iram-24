@@ -28,27 +28,29 @@ const PremiumSidebar = ({ open, onClose, language, activeCategory, onCategorySel
 
   const arSections = [
     { icon: Home, label: "الرئيسية", cat: "الرئيسية" },
-    { icon: Sparkles, label: "محلي", cat: "محلي" },
-    { icon: Newspaper, label: "عربي", cat: "عربي" },
-    { icon: Globe, label: "دولي", cat: "دولي" },
     { icon: Newspaper, label: "سياسة", cat: "سياسة" },
     { icon: TrendingUp, label: "اقتصاد", cat: "اقتصاد" },
     { icon: Trophy, label: "رياضة", cat: "رياضة" },
     { icon: Cpu, label: "تكنولوجيا", cat: "تكنولوجيا" },
+    { icon: Sparkles, label: "علوم", cat: "علوم" },
     { icon: Heart, label: "صحة", cat: "صحة" },
-    { icon: Palette, label: "فنون", cat: "فنون" },
+    { icon: Palette, label: "ثقافة وفنون", cat: "ثقافة وفنون" },
+    { icon: Globe, label: "مجتمع", cat: "مجتمع" },
+    { icon: Newspaper, label: "مقالات", cat: "مقالات" },
     { icon: Sparkles, label: "منوعات", cat: "منوعات" },
   ];
 
   const enSections = [
     { icon: Home, label: "Home", cat: "Home" },
-    { icon: Globe, label: "World", cat: "World" },
     { icon: Newspaper, label: "Politics", cat: "Politics" },
     { icon: TrendingUp, label: "Economy", cat: "Economy" },
     { icon: Trophy, label: "Sports", cat: "Sports" },
     { icon: Cpu, label: "Technology", cat: "Technology" },
+    { icon: Sparkles, label: "Science", cat: "Science" },
     { icon: Heart, label: "Health", cat: "Health" },
     { icon: Palette, label: "Arts", cat: "Arts" },
+    { icon: Globe, label: "Society", cat: "Society" },
+    { icon: Newspaper, label: "Articles", cat: "Articles" },
     { icon: Sparkles, label: "Lifestyle", cat: "Lifestyle" },
   ];
 
