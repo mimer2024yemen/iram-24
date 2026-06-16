@@ -1,6 +1,7 @@
 // Resilient home feed: DB first, stale cache second, live RSS fallback third.
 // The homepage must never go blank because of database latency or free-tier cold starts.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { classify } from "../_shared/classifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -252,35 +253,9 @@ function hashString(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
-function count(text: string, pattern: RegExp): number {
-  return text.match(pattern)?.length || 0;
-}
 
 function categorizeArticle(title: string, description: string | null, language: string): string {
-  const t = `${title} ${description || ""}`.toLowerCase();
-  if (language === "AR") {
-    const sports = count(t, /كرة|مباراة|دوري|بطولة|كأس|منتخب|نادي|هدف|لاعب|مدرب|رونالدو|ميسي|رياض/g);
-    const economy = count(t, /اقتصاد|مالي|بورصة|أسهم|نفط|دولار|ذهب|تضخم|بنك|استثمار|السوق|الأسواق|عملة/g);
-    const tech = count(t, /تكنولوج|تقني|ذكاء اصطناعي|هاتف|آيفون|سامسونغ|جوجل|مايكروسوفت|ميتا|إنترنت|تطبيق|فضاء/g);
-    const health = count(t, /صحة|طبي|مرض|علاج|دواء|فيروس|لقاح|مستشفى|سرطان|سكري/g);
-    const local = count(t, /اليمن|يمني|صنعاء|عدن|مأرب|تعز|حضرموت|الحديدة|الحوثي/g);
-    const arab = count(t, /سعود|الإمارات|مصر|الكويت|قطر|البحرين|عُمان|لبنان|سوري|عراق|أردن|فلسطين|المغرب|السودان/g);
-    const politics = count(t, /انتخاب|حكومة|رئيس|وزير|برلمان|قمة|حرب|غزة|إسرائيل|إيران|روسيا|أوكرانيا|ترامب|بايدن/g);
-    if (sports) return "رياضة";
-    if (economy) return "اقتصاد";
-    if (tech) return "تكنولوجيا";
-    if (health) return "صحة";
-    if (local) return "محلي";
-    if (arab) return "عربي";
-    if (politics) return "سياسة";
-    return "دولي";
-  }
-  if (count(t, /football|soccer|sports?|match|goal|tennis|basketball|olympic/g)) return "Sports";
-  if (count(t, /economy|market|stocks?|oil|gold|bank|inflation|dollar|finance/g)) return "Economy";
-  if (count(t, /technology|\btech\b|\bai\b|software|iphone|google|microsoft|internet|space/g)) return "Technology";
-  if (count(t, /health|medical|disease|vaccine|hospital|cancer|virus/g)) return "Health";
-  if (count(t, /election|government|president|war|military|politic|congress/g)) return "Politics";
-  return "World";
+  return classify(title, description, (language as "AR" | "EN") || "AR").category;
 }
 
 async function json(articles: ArticleRow[], meta: Record<string, unknown>, status = 200) {

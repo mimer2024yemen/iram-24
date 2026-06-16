@@ -7,20 +7,21 @@ import { proxyImageUrl } from "@/lib/imageProxy";
 import { normalizeImageUrl } from "@/lib/contentParser";
 import LazyImage from "@/components/LazyImage";
 import {
-  ArrowRight, Landmark, TrendingUp, Cpu, Trophy, Globe, Stethoscope,
-  Palette, Newspaper,
+  ArrowRight, Landmark, TrendingUp, Cpu, Trophy, Stethoscope,
+  Palette, Newspaper, FlaskConical, Users, FileText, Sparkles,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
-  "محلي": Newspaper, "عربي": Globe, "دولي": Globe, "اقتصاد": TrendingUp,
-  "رياضة": Trophy, "تكنولوجيا": Cpu, "صحة": Stethoscope, "فنون": Palette,
-  "سياسة": Landmark,
-  "World": Globe, "Economy": TrendingUp, "Sports": Trophy,
-  "Technology": Cpu, "Health": Stethoscope, "Arts": Palette, "Politics": Landmark,
+  "سياسة": Landmark, "اقتصاد": TrendingUp, "رياضة": Trophy,
+  "تكنولوجيا": Cpu, "علوم": FlaskConical, "صحة": Stethoscope,
+  "ثقافة وفنون": Palette, "مجتمع": Users, "مقالات": FileText, "منوعات": Sparkles,
+  "Politics": Landmark, "Economy": TrendingUp, "Sports": Trophy,
+  "Technology": Cpu, "Science": FlaskConical, "Health": Stethoscope,
+  "Arts": Palette, "Society": Users, "Articles": FileText, "Lifestyle": Sparkles,
 };
 
-const categoriesAR = ["محلي", "عربي", "دولي", "اقتصاد", "رياضة", "تكنولوجيا", "صحة", "فنون"];
-const categoriesEN = ["World", "Economy", "Sports", "Technology", "Health", "Arts"];
+const categoriesAR = ["سياسة", "اقتصاد", "رياضة", "تكنولوجيا", "علوم", "صحة", "ثقافة وفنون", "مجتمع", "مقالات", "منوعات"];
+const categoriesEN = ["Politics", "Economy", "Sports", "Technology", "Science", "Health", "Arts", "Society", "Articles", "Lifestyle"];
 
 const CategoriesPage = () => {
   const navigate = useNavigate();

@@ -41,7 +41,7 @@ ${recentContext}
 
 When analyzing, you MUST return a JSON object with these fields:
 - betterTitle: An improved, engaging, journalistically sound title in the same language as the input text
-- category: Best category from [محلي, عربي, دولي, اقتصاد, رياضة, تكنولوجيا, صحة, فنون, مقالات, World, Economy, Sports, Technology, Health, Arts, Articles]
+- category: Best category from [سياسة, اقتصاد, رياضة, تكنولوجيا, علوم, صحة, ثقافة وفنون, مجتمع, مقالات, منوعات, Politics, Economy, Sports, Technology, Science, Health, Arts, Society, Articles, Lifestyle]
 - hashtags: Array of 5-7 relevant hashtags (without # symbol), including trending topic tags
 - summary: A concise 2-3 sentence summary
 - analysis: A detailed analytical paragraph (150-300 words) that includes:
