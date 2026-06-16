@@ -253,7 +253,6 @@ function hashString(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
-import { classify } from "../_shared/classifier.ts";
 
 function categorizeArticle(title: string, description: string | null, language: string): string {
   return classify(title, description, (language as "AR" | "EN") || "AR").category;
