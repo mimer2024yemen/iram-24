@@ -101,16 +101,16 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
               className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
               loading="eager"
               onError={() => setImgError(true)}
-              fallback={<GradientPlaceholder category={article.category} />}
+              fallback={<GradientPlaceholder category={displayCategory} />}
             />
           ) : (
-            <GradientPlaceholder category={article.category} />
+            <GradientPlaceholder category={displayCategory} />
           )}
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))] via-[hsl(var(--navy-deep))]/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
           <span className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] mb-2">
-            {article.category}
+            {displayCategory}
           </span>
           <h2 className="font-display text-lg md:text-2xl text-white leading-tight line-clamp-3 group-hover:text-[hsl(var(--gold-soft))] transition-colors">
             {title}
@@ -138,14 +138,14 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
               alt={title}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               onError={() => setImgError(true)}
-              fallback={<GradientPlaceholder category={article.category} title={title} />}
+              fallback={<GradientPlaceholder category={displayCategory} title={title} />}
             />
           ) : (
-            <GradientPlaceholder category={article.category} title={title} />
+            <GradientPlaceholder category={displayCategory} title={title} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <span className="absolute top-2.5 start-2.5 text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] bg-[hsl(var(--navy-deep))]/80 backdrop-blur px-2.5 py-1 rounded-full border border-[hsl(var(--gold))]/30">
-            {article.category}
+            {displayCategory}
           </span>
         </div>
         <h3 className="font-display text-[15px] md:text-base text-foreground leading-snug line-clamp-3 group-hover:text-[hsl(var(--gold))] transition-colors flex-1">
@@ -185,15 +185,15 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             onError={() => setImgError(true)}
-            fallback={<GradientPlaceholder category={article.category} />}
+            fallback={<GradientPlaceholder category={displayCategory} />}
           />
         ) : (
-          <GradientPlaceholder category={article.category} />
+          <GradientPlaceholder category={displayCategory} />
         )}
       </div>
       <div className="flex flex-col justify-between flex-1 min-w-0">
         <div>
-          <span className="text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))]">{article.category}</span>
+          <span className="text-[9px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))]">{displayCategory}</span>
           <h3 className="text-foreground font-display text-sm leading-snug line-clamp-3 mt-1 group-hover:text-[hsl(var(--gold))] transition-colors">{title}</h3>
         </div>
         <div className="flex items-center justify-between mt-2">
