@@ -1,6 +1,7 @@
 // Resilient home feed: DB first, stale cache second, live RSS fallback third.
 // The homepage must never go blank because of database latency or free-tier cold starts.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { classify } from "../_shared/classifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
