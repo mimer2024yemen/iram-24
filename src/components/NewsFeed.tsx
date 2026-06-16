@@ -184,7 +184,7 @@ const NewsFeed = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           <div className="lg:col-span-2">
             <EditorialSection
-              title={isRTL ? "الشأن الدولي" : "World"}
+              title={isRTL ? "الشأن السياسي" : "Politics"}
               subtitle={isRTL ? "تغطية شاملة" : "Coverage"}
               articles={buckets[worldKey] || []}
               language={language}
