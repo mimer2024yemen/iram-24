@@ -109,9 +109,21 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--navy-deep))] via-[hsl(var(--navy-deep))]/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-          <span className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))] mb-2">
-            {displayCategory}
-          </span>
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            {isBreaking && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full tracking-wider uppercase animate-pulse">
+                <Zap size={10} /> {isRTL ? "عاجل" : "Breaking"}
+              </span>
+            )}
+            <span className="text-[10px] tracking-[0.25em] uppercase font-bold text-[hsl(var(--gold))]">
+              {displayCategory}
+            </span>
+            {geoTag && (
+              <span className="text-[9px] tracking-wider uppercase text-white/70 bg-white/10 px-1.5 py-0.5 rounded-full">
+                #{geoTag}
+              </span>
+            )}
+          </div>
           <h2 className="font-display text-lg md:text-2xl text-white leading-tight line-clamp-3 group-hover:text-[hsl(var(--gold-soft))] transition-colors">
             {title}
           </h2>
