@@ -141,7 +141,7 @@ const NewsFeed = () => {
     const sportsKey = isRTL ? "رياضة" : "Sports";
     const econKey = isRTL ? "اقتصاد" : "Economy";
     const techKey = isRTL ? "تكنولوجيا" : "Technology";
-    const worldKey = isRTL ? "دولي" : "World";
+    const worldKey = isRTL ? "سياسة" : "Politics";
     const healthKey = isRTL ? "صحة" : "Health";
     const polKey = isRTL ? "سياسة" : "Politics";
 
