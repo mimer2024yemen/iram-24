@@ -77,6 +77,13 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
   const imgSrc = rawImgUrl ? proxyImageUrl(normalizeImageUrl(rawImgUrl)) : "";
   const hasImage = !!(rawImgUrl && !imgError);
   const title = decodeHtmlEntities(article.title);
+  const displayCategory = normalizeCategory(article.category);
+  const meta = useMemo(
+    () => classify(article.title, article.description, language),
+    [article.id, article.title, article.description, language]
+  );
+  const isBreaking = meta.breaking;
+  const geoTag = meta.tags.find((t) => ["اليمن", "عربي", "دولي", "Yemen", "Arab", "World"].includes(t));
 
   // Featured — premium full-bleed
   if (variant === "featured") {
