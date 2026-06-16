@@ -1,4 +1,4 @@
-import { X, Home, Globe, Newspaper, TrendingUp, Dribbble, Cpu, Heart as HeartIcon, Palette, FileText, Settings, Shield } from "lucide-react";
+import { X, Home, Newspaper, TrendingUp, Dribbble, Cpu, Heart as HeartIcon, Palette, FileText, Settings, Shield, FlaskConical, Users, Sparkles, Landmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
@@ -13,26 +13,30 @@ const Sidebar = ({ open, onClose, language, onCategorySelect }: SidebarProps) =>
 
   const arSections = [
     { icon: Home, label: "الرئيسية", cat: "الرئيسية" },
-    { icon: Globe, label: "محلي", cat: "محلي" },
-    { icon: Newspaper, label: "عربي", cat: "عربي" },
-    { icon: Globe, label: "دولي", cat: "دولي" },
+    { icon: Landmark, label: "سياسة", cat: "سياسة" },
     { icon: TrendingUp, label: "اقتصاد", cat: "اقتصاد" },
     { icon: Dribbble, label: "رياضة", cat: "رياضة" },
     { icon: Cpu, label: "تكنولوجيا", cat: "تكنولوجيا" },
+    { icon: FlaskConical, label: "علوم", cat: "علوم" },
     { icon: HeartIcon, label: "صحة", cat: "صحة" },
-    { icon: Palette, label: "فنون", cat: "فنون" },
+    { icon: Palette, label: "ثقافة وفنون", cat: "ثقافة وفنون" },
+    { icon: Users, label: "مجتمع", cat: "مجتمع" },
     { icon: FileText, label: "مقالات", cat: "مقالات" },
+    { icon: Sparkles, label: "منوعات", cat: "منوعات" },
   ];
 
   const enSections = [
     { icon: Home, label: "Home", cat: "Home" },
-    { icon: Globe, label: "World", cat: "World" },
+    { icon: Landmark, label: "Politics", cat: "Politics" },
     { icon: TrendingUp, label: "Economy", cat: "Economy" },
     { icon: Dribbble, label: "Sports", cat: "Sports" },
     { icon: Cpu, label: "Technology", cat: "Technology" },
+    { icon: FlaskConical, label: "Science", cat: "Science" },
     { icon: HeartIcon, label: "Health", cat: "Health" },
     { icon: Palette, label: "Arts", cat: "Arts" },
+    { icon: Users, label: "Society", cat: "Society" },
     { icon: FileText, label: "Articles", cat: "Articles" },
+    { icon: Sparkles, label: "Lifestyle", cat: "Lifestyle" },
   ];
 
   const sections = language === "AR" ? arSections : enSections;
