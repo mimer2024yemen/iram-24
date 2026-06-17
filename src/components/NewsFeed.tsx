@@ -354,7 +354,7 @@ const NewsFeed = () => {
               {isRTL ? "لا توجد أخبار" : "No stories"}
             </p>
           </div>
-        ) : isHome && page === 1 ? (
+        ) : isHome ? (
           renderHome()
         ) : (
           <section className="py-10">
@@ -381,7 +381,7 @@ const NewsFeed = () => {
           </section>
         )}
 
-        {!loading && pageArticles.length > 0 && !(isHome && page === 1) && renderPagination()}
+        {!loading && pageArticles.length > 0 && (hasMore || page > 1) && renderPagination()}
       </main>
 
       <ManualArticlesSection language={language} />
