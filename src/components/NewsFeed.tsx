@@ -80,7 +80,7 @@ const NewsFeed = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const totalPages = Math.max(Math.ceil(totalEstimated / PAGE_SIZE), page + (hasMore ? 1 : 0));
+  const totalPages = Math.max(Math.ceil(totalEstimated / pageSize), page + (hasMore ? 1 : 0));
   const renderPagination = () => {
     const pages: (number | "...")[] = [];
     if (totalPages <= 7) for (let i = 1; i <= totalPages; i++) pages.push(i);
