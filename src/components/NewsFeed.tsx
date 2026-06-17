@@ -139,18 +139,18 @@ const NewsFeed = () => {
 
   // HOME LAYOUT — Cinematic Premium
   const renderHome = () => {
-    const top = articles.slice(0, 5);
+    const source = pageArticles;
+    const top = source.slice(0, 5);
     const sportsKey = isRTL ? "رياضة" : "Sports";
     const econKey = isRTL ? "اقتصاد" : "Economy";
     const techKey = isRTL ? "تكنولوجيا" : "Technology";
     const worldKey = isRTL ? "سياسة" : "Politics";
     const healthKey = isRTL ? "صحة" : "Health";
-    const polKey = isRTL ? "سياسة" : "Politics";
 
-    const mostRead = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
-    const trending = articles.slice(5, 11);
-    const editorPicks = articles.filter(a => a.image_url).slice(11, 15);
-    const recent = articles.slice(15, 39);
+    const mostRead = [...source].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+    const trending = source.slice(5, 11);
+    const editorPicks = source.filter(a => a.image_url).slice(11, 15);
+    const recent = source.slice(15, 39);
 
     return (
       <>
