@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, TrendingUp, Flame, Star } from "lucide-react
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 24;
+const HOME_PAGE_SIZE = 39;
 
 const NewsFeed = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,20 +51,21 @@ const NewsFeed = () => {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const isHome = activeCategory === "الرئيسية" || activeCategory === "Home";
-  const fetchLimit = isHome && page === 1 ? 60 : PAGE_SIZE * page + 1;
+  const pageSize = isHome ? HOME_PAGE_SIZE : PAGE_SIZE;
+  const fetchLimit = pageSize * page + 1;
   const { articles, loading } = useArticles(language, activeCategory, fetchLimit);
 
-  const startIdx = (page - 1) * PAGE_SIZE;
-  const pageArticles = articles.slice(startIdx, startIdx + PAGE_SIZE);
-  const hasMore = articles.length > startIdx + PAGE_SIZE;
+  const startIdx = (page - 1) * pageSize;
+  const pageArticles = articles.slice(startIdx, startIdx + pageSize);
+  const hasMore = articles.length > startIdx + pageSize;
   const totalEstimated = articles.length;
   const isRTL = language === "AR";
 
   const buckets = useMemo(() => {
     const m: Record<string, typeof articles> = {};
-    for (const a of articles) (m[a.category] ||= []).push(a);
+    for (const a of pageArticles) (m[a.category] ||= []).push(a);
     return m;
-  }, [articles]);
+  }, [pageArticles]);
 
   const onLang = (l: "AR" | "EN") => {
     setLanguage(l);
