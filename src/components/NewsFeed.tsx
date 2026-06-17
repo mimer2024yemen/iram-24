@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, TrendingUp, Flame, Star } from "lucide-react
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 24;
+const HOME_PAGE_SIZE = 39;
 
 const NewsFeed = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,20 +51,21 @@ const NewsFeed = () => {
   const [showSidebar, setShowSidebar] = useState(false);
 
   const isHome = activeCategory === "الرئيسية" || activeCategory === "Home";
-  const fetchLimit = isHome && page === 1 ? 60 : PAGE_SIZE * page + 1;
+  const pageSize = isHome ? HOME_PAGE_SIZE : PAGE_SIZE;
+  const fetchLimit = pageSize * page + 1;
   const { articles, loading } = useArticles(language, activeCategory, fetchLimit);
 
-  const startIdx = (page - 1) * PAGE_SIZE;
-  const pageArticles = articles.slice(startIdx, startIdx + PAGE_SIZE);
-  const hasMore = articles.length > startIdx + PAGE_SIZE;
+  const startIdx = (page - 1) * pageSize;
+  const pageArticles = articles.slice(startIdx, startIdx + pageSize);
+  const hasMore = articles.length > startIdx + pageSize;
   const totalEstimated = articles.length;
   const isRTL = language === "AR";
 
   const buckets = useMemo(() => {
     const m: Record<string, typeof articles> = {};
-    for (const a of articles) (m[a.category] ||= []).push(a);
+    for (const a of pageArticles) (m[a.category] ||= []).push(a);
     return m;
-  }, [articles]);
+  }, [pageArticles]);
 
   const onLang = (l: "AR" | "EN") => {
     setLanguage(l);
@@ -78,7 +80,7 @@ const NewsFeed = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const totalPages = Math.max(Math.ceil(totalEstimated / PAGE_SIZE), page + (hasMore ? 1 : 0));
+  const totalPages = Math.max(Math.ceil(totalEstimated / pageSize), page + (hasMore ? 1 : 0));
   const renderPagination = () => {
     const pages: (number | "...")[] = [];
     if (totalPages <= 7) for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -137,18 +139,18 @@ const NewsFeed = () => {
 
   // HOME LAYOUT — Cinematic Premium
   const renderHome = () => {
-    const top = articles.slice(0, 5);
+    const source = pageArticles;
+    const top = source.slice(0, 5);
     const sportsKey = isRTL ? "رياضة" : "Sports";
     const econKey = isRTL ? "اقتصاد" : "Economy";
     const techKey = isRTL ? "تكنولوجيا" : "Technology";
     const worldKey = isRTL ? "سياسة" : "Politics";
     const healthKey = isRTL ? "صحة" : "Health";
-    const polKey = isRTL ? "سياسة" : "Politics";
 
-    const mostRead = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
-    const trending = articles.slice(5, 11);
-    const editorPicks = articles.filter(a => a.image_url).slice(11, 15);
-    const recent = articles.slice(15, 39);
+    const mostRead = [...source].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+    const trending = source.slice(5, 11);
+    const editorPicks = source.filter(a => a.image_url).slice(11, 15);
+    const recent = source.slice(15, 39);
 
     return (
       <>
@@ -352,7 +354,7 @@ const NewsFeed = () => {
               {isRTL ? "لا توجد أخبار" : "No stories"}
             </p>
           </div>
-        ) : isHome && page === 1 ? (
+        ) : isHome ? (
           renderHome()
         ) : (
           <section className="py-10">
@@ -379,7 +381,7 @@ const NewsFeed = () => {
           </section>
         )}
 
-        {!loading && pageArticles.length > 0 && !(isHome && page === 1) && renderPagination()}
+        {!loading && pageArticles.length > 0 && (hasMore || page > 1) && renderPagination()}
       </main>
 
       <ManualArticlesSection language={language} />
