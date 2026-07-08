@@ -197,8 +197,10 @@ const ArticlePage = () => {
 
   const isFav = favs.includes(article.id);
   const articleUrl = `${window.location.origin}/article/${article.id}`;
+  // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
+  const shareUrl = `https://twqwwtgayqhjuyzngejr.supabase.co/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
   const title = decodeHtmlEntities(article.title);
-  const shareText = `${title} - إيرام برس\n${articleUrl}`;
+  const shareText = `${title} - إيرام برس\n${shareUrl}`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
@@ -208,7 +210,7 @@ const ArticlePage = () => {
   };
   const handleShareNative = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title, text: shareText, url: articleUrl }); } catch {}
+      try { await navigator.share({ title, text: shareText, url: shareUrl }); } catch {}
     } else handleCopy();
   };
 
