@@ -346,10 +346,10 @@ const ArticlePage = () => {
           </>
         )}
 
-        {/* Standfirst */}
-        {article.description && (
+        {/* Standfirst (hidden if already contained in body to prevent duplication) */}
+        {showStandfirst && (
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-center max-w-2xl mx-auto my-6 font-serif italic">
-            {decodeHtmlEntities(article.description)}
+            {decodedDesc}
           </p>
         )}
 
