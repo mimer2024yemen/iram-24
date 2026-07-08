@@ -49,9 +49,13 @@ const ArticleEditor = () => {
   };
 
   const uploadImage = async (file: File, folder: string): Promise<string | null> => {
-    const ext = file.name.split(".").pop();
+    const compressed = await compressImage(file, { maxWidth: 1920, quality: 0.82 });
+    const ext = compressed.name.split(".").pop() || "webp";
     const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from("article-images").upload(fileName, file);
+    const { error } = await supabase.storage.from("article-images").upload(fileName, compressed, {
+      contentType: compressed.type,
+      cacheControl: "31536000",
+    });
     if (error) {
       console.error("Upload error:", error);
       return null;
