@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 import {
   Sparkles, Loader2, Upload, X, Wand2, RefreshCw, PenLine,
   FileText, Hash, Eraser, Save, ArrowRight, Image as ImageIcon,
