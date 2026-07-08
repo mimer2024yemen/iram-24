@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AR_CATEGORIES, EN_CATEGORIES } from "@/lib/newsUtils";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 
 const ArticleEditor = () => {
   const [title, setTitle] = useState("");
