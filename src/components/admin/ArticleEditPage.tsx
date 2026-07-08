@@ -111,9 +111,13 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
     try {
       let finalImageUrl = imageUrl;
       if (newImage) {
-        const ext = newImage.name.split(".").pop();
+        const compressed = await compressImage(newImage, { maxWidth: 1920, quality: 0.82 });
+        const ext = compressed.name.split(".").pop() || "webp";
         const fileName = `main/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("article-images").upload(fileName, newImage);
+        const { error: uploadErr } = await supabase.storage.from("article-images").upload(fileName, compressed, {
+          contentType: compressed.type,
+          cacheControl: "31536000",
+        });
         if (uploadErr) throw uploadErr;
         const { data: urlData } = supabase.storage.from("article-images").getPublicUrl(fileName);
         finalImageUrl = urlData.publicUrl;
