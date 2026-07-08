@@ -44,17 +44,23 @@ const ArticlePage = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Inject JSON-LD NewsArticle + Breadcrumb structured data
+  // Inject JSON-LD + dynamic OG/Twitter meta for per-article previews
   useEffect(() => {
     if (!article) return;
     const url = `${window.location.origin}/article/${article.id}`;
+    const cleanTitle = decodeHtmlEntities(article.title);
+    const rawDesc = decodeHtmlEntities(article.description || article.content || "").replace(/<[^>]+>/g, "").trim();
+    const desc = rawDesc.slice(0, 200);
+    const image = article.image_url || undefined;
+
     const ld = {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "NewsArticle",
-          headline: decodeHtmlEntities(article.title),
-          image: article.image_url ? [article.image_url] : undefined,
+          headline: cleanTitle,
+          description: desc || undefined,
+          image: image ? [image] : undefined,
           datePublished: article.published_at || article.created_at,
           dateModified: article.published_at || article.created_at,
           author: article.author_name ? [{ "@type": "Person", name: article.author_name }] : undefined,
@@ -68,7 +74,7 @@ const ArticlePage = () => {
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "إيرام 24", item: window.location.origin },
             { "@type": "ListItem", position: 2, name: article.category, item: `${window.location.origin}/categories?c=${encodeURIComponent(article.category)}` },
-            { "@type": "ListItem", position: 3, name: decodeHtmlEntities(article.title), item: url },
+            { "@type": "ListItem", position: 3, name: cleanTitle, item: url },
           ],
         },
       ],
@@ -79,12 +85,48 @@ const ArticlePage = () => {
     tag.text = JSON.stringify(ld);
     document.querySelectorAll("#article-jsonld").forEach((n) => n.remove());
     document.head.appendChild(tag);
-    // Title + description for SEO
+
+    // Per-article meta (helps JS-executing crawlers + shows correct tab preview)
+    const setMeta = (selector: string, attr: string, key: string, value: string) => {
+      if (!value) return;
+      let el = document.head.querySelector(selector) as HTMLMetaElement | HTMLLinkElement | null;
+      if (!el) {
+        el = document.createElement(selector.startsWith("link") ? "link" : "meta") as any;
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute(selector.startsWith("link") ? "href" : "content", value);
+    };
     const prevTitle = document.title;
-    document.title = `${decodeHtmlEntities(article.title)} | إيرام 24`;
+    const snapshot = new Map<string, string | null>();
+    const track = (sel: string) => {
+      const el = document.head.querySelector(sel);
+      snapshot.set(sel, el ? el.getAttribute(sel.startsWith("link") ? "href" : "content") : null);
+    };
+    ["meta[name='description']","meta[property='og:title']","meta[property='og:description']","meta[property='og:image']","meta[property='og:url']","meta[property='og:type']","meta[name='twitter:title']","meta[name='twitter:description']","meta[name='twitter:image']","link[rel='canonical']"].forEach(track);
+
+    document.title = `${cleanTitle} | إيرام 24`;
+    setMeta("meta[name='description']", "name", "description", desc);
+    setMeta("meta[property='og:title']", "property", "og:title", cleanTitle);
+    setMeta("meta[property='og:description']", "property", "og:description", desc);
+    setMeta("meta[property='og:url']", "property", "og:url", url);
+    setMeta("meta[property='og:type']", "property", "og:type", "article");
+    if (image) setMeta("meta[property='og:image']", "property", "og:image", image);
+    setMeta("meta[name='twitter:title']", "name", "twitter:title", cleanTitle);
+    setMeta("meta[name='twitter:description']", "name", "twitter:description", desc);
+    if (image) setMeta("meta[name='twitter:image']", "name", "twitter:image", image);
+    setMeta("link[rel='canonical']", "rel", "canonical", url);
+
     return () => {
       tag.remove();
       document.title = prevTitle;
+      snapshot.forEach((val, sel) => {
+        const el = document.head.querySelector(sel);
+        if (!el) return;
+        const attr = sel.startsWith("link") ? "href" : "content";
+        if (val === null) el.removeAttribute(attr);
+        else el.setAttribute(attr, val);
+      });
     };
   }, [article]);
 
@@ -155,8 +197,10 @@ const ArticlePage = () => {
 
   const isFav = favs.includes(article.id);
   const articleUrl = `${window.location.origin}/article/${article.id}`;
+  // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
+  const shareUrl = `https://twqwwtgayqhjuyzngejr.supabase.co/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
   const title = decodeHtmlEntities(article.title);
-  const shareText = `${title} - إيرام برس\n${articleUrl}`;
+  const shareText = `${title} - إيرام برس\n${shareUrl}`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
@@ -166,17 +210,40 @@ const ArticlePage = () => {
   };
   const handleShareNative = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title, text: shareText, url: articleUrl }); } catch {}
+      try { await navigator.share({ title, text: shareText, url: shareUrl }); } catch {}
     } else handleCopy();
   };
 
-  const rawContent = article.content || article.description || "";
-  const structured = parseContentToStructured(decodeHtmlEntities(rawContent));
+  const decodedDesc = decodeHtmlEntities(article.description || "").trim();
+  const decodedContent = decodeHtmlEntities(article.content || "").trim();
+  // Prefer content; only fall back to description if there's no content at all
+  const rawContent = decodedContent || decodedDesc;
+  const structured = parseContentToStructured(rawContent);
   const contentImages = structured.images.filter(img => img && img.length > 10);
   const contentVideos = structured.videos.filter(v => v && v.length > 10);
-  const textParagraphs = structured.text.length > 0
-    ? structured.text
+
+  // Dedupe: drop paragraphs that are duplicates (normalized) of ones already shown
+  const seen = new Set<string>();
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const uniqueParagraphs = structured.text.filter((p) => {
+    const k = norm(p);
+    if (k.length < 3 || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const textParagraphs = uniqueParagraphs.length > 0
+    ? uniqueParagraphs
     : [(isRTL ? "لا يوجد محتوى إضافي." : "No additional content.")];
+
+  // Hide standfirst if the description is already contained in the body (avoids the
+  // "text shown twice" bug the user reported).
+  const bodyJoined = norm(uniqueParagraphs.join(" "));
+  const descNorm = norm(decodedDesc);
+  const descDuplicated = !!descNorm && (
+    bodyJoined.includes(descNorm) ||
+    (descNorm.length > 40 && bodyJoined.startsWith(descNorm.slice(0, Math.min(descNorm.length, 120))))
+  );
+  const showStandfirst = !!decodedDesc && !descDuplicated;
 
   const wordCount = textParagraphs.join(" ").split(/\s+/).length;
   const readMinutes = Math.max(1, Math.round(wordCount / 200));
@@ -197,9 +264,9 @@ const ArticlePage = () => {
 
   const shareButtons = [
     { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` },
-    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(title + " - إيرام برس")}` },
-    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}` },
-    { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}` },
+    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title + " - إيرام برس")}` },
+    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title + " - إيرام برس")}&url=${encodeURIComponent(shareUrl)}` },
+    { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
   ];
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
@@ -281,10 +348,10 @@ const ArticlePage = () => {
           </>
         )}
 
-        {/* Standfirst */}
-        {article.description && (
+        {/* Standfirst (hidden if already contained in body to prevent duplication) */}
+        {showStandfirst && (
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-center max-w-2xl mx-auto my-6 font-serif italic">
-            {decodeHtmlEntities(article.description)}
+            {decodedDesc}
           </p>
         )}
 
