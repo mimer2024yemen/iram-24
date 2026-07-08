@@ -264,9 +264,9 @@ const ArticlePage = () => {
 
   const shareButtons = [
     { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` },
-    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(title + " - إيرام برس")}` },
-    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}` },
-    { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}` },
+    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title + " - إيرام برس")}` },
+    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title + " - إيرام برس")}&url=${encodeURIComponent(shareUrl)}` },
+    { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
   ];
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
