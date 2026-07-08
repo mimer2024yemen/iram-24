@@ -14,3 +14,7 @@ verify_jwt = false
 
 [functions.analyze-source]
 verify_jwt = false
+
+[functions.article-share]
+verify_jwt = false
+
