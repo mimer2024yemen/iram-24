@@ -212,13 +212,36 @@ const ArticlePage = () => {
     } else handleCopy();
   };
 
-  const rawContent = article.content || article.description || "";
-  const structured = parseContentToStructured(decodeHtmlEntities(rawContent));
+  const decodedDesc = decodeHtmlEntities(article.description || "").trim();
+  const decodedContent = decodeHtmlEntities(article.content || "").trim();
+  // Prefer content; only fall back to description if there's no content at all
+  const rawContent = decodedContent || decodedDesc;
+  const structured = parseContentToStructured(rawContent);
   const contentImages = structured.images.filter(img => img && img.length > 10);
   const contentVideos = structured.videos.filter(v => v && v.length > 10);
-  const textParagraphs = structured.text.length > 0
-    ? structured.text
+
+  // Dedupe: drop paragraphs that are duplicates (normalized) of ones already shown
+  const seen = new Set<string>();
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const uniqueParagraphs = structured.text.filter((p) => {
+    const k = norm(p);
+    if (k.length < 3 || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const textParagraphs = uniqueParagraphs.length > 0
+    ? uniqueParagraphs
     : [(isRTL ? "لا يوجد محتوى إضافي." : "No additional content.")];
+
+  // Hide standfirst if the description is already contained in the body (avoids the
+  // "text shown twice" bug the user reported).
+  const bodyJoined = norm(uniqueParagraphs.join(" "));
+  const descNorm = norm(decodedDesc);
+  const descDuplicated = !!descNorm && (
+    bodyJoined.includes(descNorm) ||
+    (descNorm.length > 40 && bodyJoined.startsWith(descNorm.slice(0, Math.min(descNorm.length, 120))))
+  );
+  const showStandfirst = !!decodedDesc && !descDuplicated;
 
   const wordCount = textParagraphs.join(" ").split(/\s+/).length;
   const readMinutes = Math.max(1, Math.round(wordCount / 200));
