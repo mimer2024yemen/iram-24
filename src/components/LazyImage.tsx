@@ -46,7 +46,7 @@ const LazyImage = ({ src, alt, className = "", loading = "lazy", fetchPriority, 
       className={className}
       loading={loading}
       decoding="async"
-      fetchPriority={fetchPriority || (loading === "eager" ? "high" : undefined)}
+      {...({ fetchpriority: fetchPriority || (loading === "eager" ? "high" : undefined) } as any)}
       width={width}
       height={height}
       onError={() => {
