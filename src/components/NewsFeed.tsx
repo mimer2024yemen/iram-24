@@ -60,6 +60,10 @@ const NewsFeed = () => {
   const hasMore = articles.length > startIdx + pageSize;
   const totalEstimated = articles.length;
   const isRTL = language === "AR";
+  const tickerHeadlines = useMemo(
+    () => articles.slice(0, 10).map((article) => decodeHtmlEntities(article.title)).filter(Boolean),
+    [articles]
+  );
 
   const buckets = useMemo(() => {
     const m: Record<string, typeof articles> = {};
@@ -344,7 +348,7 @@ const NewsFeed = () => {
       <MarketTicker language={language} />
       <BreakingNewsBar
         language={language}
-        initialHeadlines={articles.slice(0, 10).map((article) => decodeHtmlEntities(article.title)).filter(Boolean)}
+        initialHeadlines={tickerHeadlines}
       />
 
 
