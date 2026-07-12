@@ -92,7 +92,7 @@ ${published ? `<meta property="article:published_time" content="${escape(publish
     const headers = new Headers(corsHeaders);
     headers.set("Content-Type", "text/html; charset=utf-8");
     headers.set("Cache-Control", "public, max-age=300, s-maxage=600");
-    return new Response(html, { headers });
+    return new Response(new TextEncoder().encode(html), { headers });
   } catch (_e) {
     return new Response(null, { status: 302, headers: { location: target, ...corsHeaders } });
   }
