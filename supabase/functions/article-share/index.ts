@@ -89,13 +89,10 @@ ${published ? `<meta property="article:published_time" content="${escape(publish
 </body>
 </html>`;
 
-    return new Response(html, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=300, s-maxage=600",
-      },
-    });
+    const headers = new Headers(corsHeaders);
+    headers.set("Content-Type", "text/html; charset=utf-8");
+    headers.set("Cache-Control", "public, max-age=300, s-maxage=600");
+    return new Response(html, { headers });
   } catch (_e) {
     return new Response(null, { status: 302, headers: { location: target, ...corsHeaders } });
   }
