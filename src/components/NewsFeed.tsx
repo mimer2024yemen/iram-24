@@ -60,6 +60,10 @@ const NewsFeed = () => {
   const hasMore = articles.length > startIdx + pageSize;
   const totalEstimated = articles.length;
   const isRTL = language === "AR";
+  const tickerHeadlines = useMemo(
+    () => articles.slice(0, 10).map((article) => decodeHtmlEntities(article.title)).filter(Boolean),
+    [articles]
+  );
 
   const buckets = useMemo(() => {
     const m: Record<string, typeof articles> = {};
@@ -342,7 +346,10 @@ const NewsFeed = () => {
         <LiveTicker articles={articles.slice(0, 10)} language={language} onBeforeNavigate={saveScroll} />
       )}
       <MarketTicker language={language} />
-      <BreakingNewsBar language={language} />
+      <BreakingNewsBar
+        language={language}
+        initialHeadlines={tickerHeadlines}
+      />
 
 
       <main className="max-w-screen-xl mx-auto px-4 md:px-6" style={{ minHeight: "60vh" }}>

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 
+const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
+
 interface BreakingNewsBarProps {
   language: "AR" | "EN";
+  initialHeadlines?: string[];
 }
 
 interface BreakingSettings {
@@ -37,14 +40,27 @@ async function fetchHomeHeadlines(language: "AR" | "EN") {
   } catch { return []; }
 }
 
-const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
-  const [headlines, setHeadlines] = useState<string[]>([]);
+const BreakingNewsBar = ({ language, initialHeadlines = [] }: BreakingNewsBarProps) => {
+  const [headlines, setHeadlines] = useState<string[]>(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(STORAGE_KEY_PREFIX + language) || "[]");
+      return cached.length ? cached : initialHeadlines;
+    } catch { return initialHeadlines; }
+  });
   const [settings, setSettings] = useState<BreakingSettings | null>(null);
 
   useEffect(() => {
+    if (initialHeadlines.length > 0) {
+      setHeadlines((prev) => prev.length ? prev : initialHeadlines);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + language, JSON.stringify(initialHeadlines)); } catch {}
+    }
+
     const fetchBreaking = async () => {
       const latest = await fetchHomeHeadlines(language);
-      if (latest.length > 0) setHeadlines(latest);
+      if (latest.length > 0) {
+        setHeadlines(latest);
+        try { localStorage.setItem(STORAGE_KEY_PREFIX + language, JSON.stringify(latest)); } catch {}
+      }
     };
 
     fetchBreaking();
@@ -52,7 +68,7 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
 
     const interval = setInterval(fetchBreaking, 30000);
     return () => { clearInterval(interval); };
-  }, [language]);
+  }, [language, initialHeadlines]);
 
   if (!settings?.is_active && settings !== null) return null;
 
@@ -65,9 +81,9 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
   const isRTL = direction === "rtl";
   const animationClass = direction === "ltr" ? "animate-marquee-ltr" : "animate-marquee-rtl";
 
-  // Medium speed: ~28 chars/sec. Clamp 25s–70s.
-  const charsPerSecond = 28;
-  const duration = Math.min(70, Math.max(25, Math.round(text.length / charsPerSecond)));
+  // Medium professional speed: ~34 chars/sec. Clamp 22s–56s.
+  const charsPerSecond = 34;
+  const duration = Math.min(56, Math.max(22, Math.round(text.length / charsPerSecond)));
 
   return (
     <div className="bg-primary overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
@@ -78,11 +94,11 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
         </span>
         <div className="overflow-hidden flex-1 min-w-0">
           <div
-            className={`flex w-max whitespace-nowrap marquee-track ${animationClass}`}
+            className={`flex w-max min-w-full whitespace-nowrap marquee-track ${animationClass}`}
             style={{ ["--marquee-duration" as string]: `${duration}s` }}
           >
-            <span className="text-primary-foreground text-xs">{text}</span>
-            <span className="text-primary-foreground text-xs" aria-hidden="true">{text}</span>
+            <span className="text-primary-foreground text-xs px-3 shrink-0 min-w-full">{text}</span>
+            <span className="text-primary-foreground text-xs px-3 shrink-0 min-w-full" aria-hidden="true">{text}</span>
           </div>
         </div>
       </div>

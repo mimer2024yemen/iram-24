@@ -11,12 +11,17 @@ interface Currency {
 }
 
 const TickerBar = () => {
-  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>(() => {
+    try { return JSON.parse(localStorage.getItem("eram_currency_ticker") || "[]"); } catch { return []; }
+  });
 
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase.from("currencies").select("*").eq("is_active", true);
-      if (data) setCurrencies(data as Currency[]);
+      if (data?.length) {
+        setCurrencies(data as Currency[]);
+        try { localStorage.setItem("eram_currency_ticker", JSON.stringify(data)); } catch {}
+      }
     };
     fetch();
 
@@ -30,11 +35,11 @@ const TickerBar = () => {
 
   if (currencies.length === 0) return null;
 
-  // Natural speed scaled by number of items (~7s per item, clamped).
-  const duration = Math.min(90, Math.max(25, currencies.length * 7));
+  // Natural medium speed scaled by number of items.
+  const duration = Math.min(52, Math.max(24, currencies.length * 4));
 
   const Row = ({ ariaHidden = false }: { ariaHidden?: boolean }) => (
-    <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden={ariaHidden}>
+    <div className="flex items-center gap-6 px-3 shrink-0 min-w-full" aria-hidden={ariaHidden}>
       {currencies.map(c => (
         <span key={`${ariaHidden ? "b" : "a"}-${c.id}`} className="flex items-center gap-1">
           <span className="text-muted-foreground">{c.name}:</span>
@@ -52,7 +57,7 @@ const TickerBar = () => {
   return (
     <div className="bg-secondary border-y border-border py-1.5 overflow-hidden" dir="rtl">
       <div
-        className="flex w-max whitespace-nowrap text-xs tabular-nums marquee-track animate-marquee-rtl"
+        className="flex w-max min-w-full whitespace-nowrap text-xs tabular-nums marquee-track animate-marquee-rtl"
         style={{ ["--marquee-duration" as string]: `${duration}s` }}
       >
         <Row />

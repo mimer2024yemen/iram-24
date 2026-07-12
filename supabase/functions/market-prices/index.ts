@@ -30,12 +30,41 @@ const SYMBOLS = [
 
 let cache: { data: Quote[]; ts: number } | null = null;
 const TTL = 60_000; // 60s
+const STALE_TTL = 15 * 60_000;
+
+const MARKET_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Accept": "application/json,text/plain,*/*",
+  "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+};
+
+async function fetchQuotesBatch(): Promise<Map<string, { price: number; prev: number }>> {
+  const out = new Map<string, { price: number; prev: number }>();
+  try {
+    const symbols = SYMBOLS.map((s) => s.sym).join(",");
+    const r = await fetch(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`,
+      { headers: MARKET_HEADERS, signal: AbortSignal.timeout(5200) }
+    );
+    if (!r.ok) return out;
+    const j = await r.json();
+    for (const item of j?.quoteResponse?.result || []) {
+      const symbol = String(item.symbol || "");
+      const price = Number(item.regularMarketPrice ?? item.postMarketPrice ?? item.preMarketPrice);
+      const prev = Number(item.regularMarketPreviousClose ?? item.previousClose ?? price);
+      if (symbol && isFinite(price)) out.set(symbol, { price, prev: isFinite(prev) ? prev : price });
+    }
+  } catch {
+    // fall through to per-symbol chart fallback
+  }
+  return out;
+}
 
 async function fetchQuote(sym: string): Promise<{ price: number; prev: number } | null> {
   try {
     const r = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`,
-      { headers: { "User-Agent": "Mozilla/5.0" } }
+      { headers: MARKET_HEADERS, signal: AbortSignal.timeout(4200) }
     );
     if (!r.ok) return null;
     const j = await r.json();
@@ -60,7 +89,8 @@ Deno.serve(async (req) => {
     });
   }
 
-  const results = await Promise.all(SYMBOLS.map((s) => fetchQuote(s.sym)));
+  const batch = await fetchQuotesBatch();
+  const results = await Promise.all(SYMBOLS.map((s) => batch.get(s.sym) || fetchQuote(s.sym)));
   const quotes: Quote[] = [];
   SYMBOLS.forEach((s, i) => {
     const q = results[i];
@@ -78,8 +108,14 @@ Deno.serve(async (req) => {
     });
   });
 
-  cache = { data: quotes, ts: now };
+  if (quotes.length === 0 && cache && now - cache.ts < STALE_TTL) {
+    return new Response(JSON.stringify({ quotes: cache.data, cached: true, stale: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=60, stale-while-revalidate=900" },
+    });
+  }
+
+  if (quotes.length > 0) cache = { data: quotes, ts: now };
   return new Response(JSON.stringify({ quotes, cached: false }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
+    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=60, stale-while-revalidate=900" },
   });
 });

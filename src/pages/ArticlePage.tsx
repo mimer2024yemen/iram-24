@@ -196,11 +196,10 @@ const ArticlePage = () => {
   }
 
   const isFav = favs.includes(article.id);
-  const articleUrl = `${window.location.origin}/article/${article.id}`;
   // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
-  const shareUrl = `https://twqwwtgayqhjuyzngejr.supabase.co/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+  const shareUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
   const title = decodeHtmlEntities(article.title);
-  const shareText = `${title} - إيرام برس\n${shareUrl}`;
+  const shareText = `${title} - إيرام 24\n${shareUrl}`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
@@ -264,8 +263,8 @@ const ArticlePage = () => {
 
   const shareButtons = [
     { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` },
-    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title + " - إيرام برس")}` },
-    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title + " - إيرام برس")}&url=${encodeURIComponent(shareUrl)}` },
+    { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title + " - إيرام 24")}` },
+    { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title + " - إيرام 24")}&url=${encodeURIComponent(shareUrl)}` },
     { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
   ];
 
@@ -284,7 +283,7 @@ const ArticlePage = () => {
             <span className="hidden sm:inline font-bold">{isRTL ? "رجوع" : "Back"}</span>
           </button>
           <span className="font-display text-base text-[hsl(var(--gold))] tracking-wider">
-            {isRTL ? "إيرام برس" : "ERAM PRESS"}
+             {isRTL ? "إيرام 24" : "ERAM 24"}
           </span>
           <div className="flex items-center gap-1">
             <button onClick={handleShareNative} aria-label="Share" className="w-9 h-9 rounded-full bg-foreground/5 hover:bg-[hsl(var(--gold))]/15 hover:text-[hsl(var(--gold))] flex items-center justify-center transition-colors">

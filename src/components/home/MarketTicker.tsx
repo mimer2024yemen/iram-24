@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+const MARKET_CACHE_KEY = "eram_market_quotes_v2";
+
 interface Quote {
   symbol: string;
   label_ar: string;
@@ -22,7 +24,9 @@ const formatNum = (n: number) => {
 };
 
 const MarketTicker = ({ language }: Props) => {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>(() => {
+    try { return JSON.parse(localStorage.getItem(MARKET_CACHE_KEY) || "[]"); } catch { return []; }
+  });
   const isRTL = language === "AR";
 
   useEffect(() => {
@@ -30,7 +34,10 @@ const MarketTicker = ({ language }: Props) => {
     const load = async () => {
       try {
         const { data } = await supabase.functions.invoke("market-prices");
-        if (!cancelled && data?.quotes?.length) setQuotes(data.quotes);
+        if (!cancelled && data?.quotes?.length) {
+          setQuotes(data.quotes);
+          try { localStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(data.quotes)); } catch {}
+        }
       } catch {/* ignore */}
     };
     load();
@@ -62,11 +69,11 @@ const MarketTicker = ({ language }: Props) => {
         {/* Scrolling track */}
         <div className="flex-1 overflow-hidden relative">
           <div
-            className={`flex w-max marquee-track ${isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr"}`}
-            style={{ ["--marquee-duration" as string]: `${Math.max(30, Math.min(55, quotes.length * 2.5))}s` }}
+            className={`flex w-max min-w-full marquee-track ${isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr"}`}
+            style={{ ["--marquee-duration" as string]: `${Math.max(24, Math.min(42, quotes.length * 2.1))}s` }}
           >
             {[0, 1].map((copy) => (
-              <div key={copy} className="flex items-center gap-7 whitespace-nowrap py-2 px-3 shrink-0" aria-hidden={copy === 1}>
+              <div key={copy} className="flex items-center gap-7 whitespace-nowrap py-2 px-3 shrink-0 min-w-full" aria-hidden={copy === 1}>
                 {quotes.map((q, i) => {
                   const up = q.change >= 0;
                   const label = isRTL ? q.label_ar : q.label_en;

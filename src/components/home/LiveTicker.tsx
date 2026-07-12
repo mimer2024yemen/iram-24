@@ -14,12 +14,12 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
   const isRTL = language === "AR";
   const items = articles.slice(0, 10);
 
-  // Medium speed scaled by item count: ~5s per item, clamp 30s–70s.
-  const duration = Math.min(70, Math.max(30, items.length * 5));
+  // Medium global-news speed, never sluggish.
+  const duration = Math.min(50, Math.max(24, items.length * 3.5));
   const animationClass = isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr";
 
   const Row = ({ ariaHidden = false }: { ariaHidden?: boolean }) => (
-    <div className="flex items-center gap-8 px-5 py-2.5 whitespace-nowrap shrink-0" aria-hidden={ariaHidden}>
+    <div className="flex items-center gap-8 px-5 py-2.5 whitespace-nowrap shrink-0 min-w-full" aria-hidden={ariaHidden}>
       {items.map((a, i) => (
         <button
           key={`${ariaHidden ? "b" : "a"}-${a.id}`}
@@ -54,7 +54,7 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
         </div>
         <div className="flex-1 overflow-hidden">
           <div
-            className={`flex w-max marquee-track ${animationClass}`}
+            className={`flex w-max min-w-full marquee-track ${animationClass}`}
             style={{ ["--marquee-duration" as string]: `${duration}s` }}
           >
             <Row />
