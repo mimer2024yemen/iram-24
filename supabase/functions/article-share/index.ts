@@ -91,9 +91,9 @@ ${published ? `<meta property="article:published_time" content="${escape(publish
 
     return new Response(html, {
       headers: {
+        ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "public, max-age=300, s-maxage=600",
-        ...corsHeaders,
       },
     });
   } catch (_e) {

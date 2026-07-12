@@ -342,7 +342,10 @@ const NewsFeed = () => {
         <LiveTicker articles={articles.slice(0, 10)} language={language} onBeforeNavigate={saveScroll} />
       )}
       <MarketTicker language={language} />
-      <BreakingNewsBar language={language} />
+      <BreakingNewsBar
+        language={language}
+        initialHeadlines={articles.slice(0, 10).map((article) => decodeHtmlEntities(article.title)).filter(Boolean)}
+      />
 
 
       <main className="max-w-screen-xl mx-auto px-4 md:px-6" style={{ minHeight: "60vh" }}>

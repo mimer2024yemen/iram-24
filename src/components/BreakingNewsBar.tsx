@@ -5,6 +5,7 @@ const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
 
 interface BreakingNewsBarProps {
   language: "AR" | "EN";
+  initialHeadlines?: string[];
 }
 
 interface BreakingSettings {
@@ -39,13 +40,21 @@ async function fetchHomeHeadlines(language: "AR" | "EN") {
   } catch { return []; }
 }
 
-const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
+const BreakingNewsBar = ({ language, initialHeadlines = [] }: BreakingNewsBarProps) => {
   const [headlines, setHeadlines] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_PREFIX + language) || "[]"); } catch { return []; }
+    try {
+      const cached = JSON.parse(localStorage.getItem(STORAGE_KEY_PREFIX + language) || "[]");
+      return cached.length ? cached : initialHeadlines;
+    } catch { return initialHeadlines; }
   });
   const [settings, setSettings] = useState<BreakingSettings | null>(null);
 
   useEffect(() => {
+    if (initialHeadlines.length > 0) {
+      setHeadlines((prev) => prev.length ? prev : initialHeadlines);
+      try { localStorage.setItem(STORAGE_KEY_PREFIX + language, JSON.stringify(initialHeadlines)); } catch {}
+    }
+
     const fetchBreaking = async () => {
       const latest = await fetchHomeHeadlines(language);
       if (latest.length > 0) {
@@ -59,7 +68,7 @@ const BreakingNewsBar = ({ language }: BreakingNewsBarProps) => {
 
     const interval = setInterval(fetchBreaking, 30000);
     return () => { clearInterval(interval); };
-  }, [language]);
+  }, [language, initialHeadlines]);
 
   if (!settings?.is_active && settings !== null) return null;
 
