@@ -5,6 +5,7 @@ interface LazyImageProps {
   alt: string;
   className?: string;
   loading?: "lazy" | "eager";
+  fetchPriority?: "high" | "low" | "auto";
   onError?: () => void;
   /** Optional fallback rendered if the image fails to load. */
   fallback?: ReactNode;
@@ -15,7 +16,7 @@ interface LazyImageProps {
 
 const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3C/svg%3E";
 
-const LazyImage = ({ src, alt, className = "", loading = "lazy", onError, fallback, width, height }: LazyImageProps) => {
+const LazyImage = ({ src, alt, className = "", loading = "lazy", fetchPriority, onError, fallback, width, height }: LazyImageProps) => {
   const [isVisible, setIsVisible] = useState(loading === "eager");
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -45,7 +46,7 @@ const LazyImage = ({ src, alt, className = "", loading = "lazy", onError, fallba
       className={className}
       loading={loading}
       decoding="async"
-      {...(loading === "eager" ? { fetchPriority: "high" as const } : {})}
+      fetchPriority={fetchPriority || (loading === "eager" ? "high" : undefined)}
       width={width}
       height={height}
       onError={() => {
