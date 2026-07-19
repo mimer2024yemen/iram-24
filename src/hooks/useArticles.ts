@@ -76,6 +76,27 @@ export function getCachedArticleById(id: string): Article | null {
   return null;
 }
 
+export function getCachedRelatedArticles(article: Pick<Article, "id" | "category" | "language">, limit = 6): Article[] {
+  const seen = new Set<string>([article.id]);
+  const all: Article[] = [];
+  const pushMany = (items?: Article[]) => {
+    for (const item of items || []) {
+      if (!item?.id || seen.has(item.id)) continue;
+      seen.add(item.id);
+      all.push(item);
+    }
+  };
+
+  for (const entry of MEM_CACHE.values()) pushMany(entry.data);
+  try {
+    for (const key of readLRU()) pushMany(readPersisted(key)?.data);
+  } catch {}
+
+  const sameCategory = all.filter((a) => a.language === article.language && a.category === article.category);
+  const sameLanguage = all.filter((a) => a.language === article.language && a.category !== article.category);
+  return [...sameCategory, ...sameLanguage].slice(0, limit);
+}
+
 // (unused legacy helper removed)
 
 async function fetchEdgeDirect(language: string, category: string | undefined, limit: number): Promise<Article[] | null> {

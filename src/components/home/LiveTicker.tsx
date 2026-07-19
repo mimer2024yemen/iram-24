@@ -16,13 +16,13 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
 
   // Medium global-news speed, never sluggish.
   const duration = Math.min(50, Math.max(24, items.length * 3.5));
-  const animationClass = isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr";
+  const animationClass = isRTL ? "animate-marquee-ltr" : "animate-marquee-rtl";
 
   const Row = ({ ariaHidden = false }: { ariaHidden?: boolean }) => (
     <div className="flex items-center gap-8 px-5 py-2.5 whitespace-nowrap shrink-0 min-w-full" aria-hidden={ariaHidden}>
-      {items.map((a, i) => (
+      {Array.from({ length: 3 }, () => items).flat().map((a, i) => (
         <button
-          key={`${ariaHidden ? "b" : "a"}-${a.id}`}
+          key={`${ariaHidden ? "b" : "a"}-${a.id}-${i}`}
           onClick={() => {
             if (ariaHidden) return;
             onBeforeNavigate?.();
@@ -36,7 +36,7 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
           <span className="text-white text-[13px] font-medium group-hover:text-[hsl(var(--gold))] transition-colors max-w-[320px] truncate">
             {decodeHtmlEntities(a.title)}
           </span>
-          {i < items.length - 1 && <span className="text-white/30">·</span>}
+          {i < items.length * 3 - 1 && <span className="text-white/30">·</span>}
         </button>
       ))}
       <span className="text-white/30">·</span>
