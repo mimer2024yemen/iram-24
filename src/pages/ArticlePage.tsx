@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Article, getCachedArticleById } from "@/hooks/useArticles";
+import { Article, getCachedArticleById, getCachedRelatedArticles } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
-import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Bookmark, Share2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Share2, X } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import LazyImage from "@/components/LazyImage";
 import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
@@ -28,6 +28,7 @@ const ArticlePage = () => {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [progress, setProgress] = useState(0);
+  const [sourceReaderOpen, setSourceReaderOpen] = useState(false);
 
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
@@ -137,6 +138,7 @@ const ArticlePage = () => {
       setRelatedArticles([]);
       setSourceInfo(null);
       setImgError(false);
+      setSourceReaderOpen(false);
       const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
       const result = await Promise.race([
         supabase.from("articles").select("*").eq("id", id).maybeSingle(),
@@ -145,6 +147,7 @@ const ArticlePage = () => {
       const data = result.data || getCachedArticleById(id);
       if (data) {
         setArticle(data as any);
+        setRelatedArticles(getCachedRelatedArticles(data as any, 6));
         if (!id.startsWith("rss-")) supabase.from("articles").update({ views: (data.views || 0) + 1 }).eq("id", id).then(() => {});
         if (data.source_id && !id.startsWith("rss-")) {
           const { data: src } = await supabase.from("news_sources")
@@ -156,7 +159,7 @@ const ArticlePage = () => {
           const { data: related } = await supabase.from("articles").select("*")
             .eq("category", data.category).eq("language", data.language)
             .neq("id", id).order("published_at", { ascending: false }).limit(6);
-          if (related) setRelatedArticles(related as any);
+          if (related?.length) setRelatedArticles(related as any);
         }
       }
       setLoading(false);
@@ -199,10 +202,10 @@ const ArticlePage = () => {
   // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
   const shareUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
   const title = decodeHtmlEntities(article.title);
-  const shareText = `${title} - إيرام 24\n${shareUrl}`;
+  const shareText = `${title} - إيرام 24`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareText);
+    await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     toast.success(isRTL ? "تم نسخ الرابط" : "Link copied");
     setTimeout(() => setCopied(false), 2000);
@@ -254,6 +257,9 @@ const ArticlePage = () => {
     ? sourceInfo.alt_source_name : sourceInfo?.name || null;
   const displaySourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
     ? sourceInfo.alt_source_url : (shouldShowSource ? article.url : null);
+  const sourceReaderUrl = displaySourceUrl && !displaySourceUrl.startsWith("#")
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/source-proxy?url=${encodeURIComponent(displaySourceUrl)}&title=${encodeURIComponent(title)}&lang=${lang}`
+    : "";
 
   const videoUrl = (article as any).video_url;
   const seoKeywords = (article as any).seo_keywords;
@@ -262,7 +268,7 @@ const ArticlePage = () => {
   const hasHero = !!(article.image_url && !imgError);
 
   const shareButtons = [
-    { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` },
+    { name: "WhatsApp", color: "bg-green-600", url: `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}` },
     { name: "Telegram", color: "bg-blue-500", url: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title + " - إيرام 24")}` },
     { name: "X", color: "bg-foreground/80 text-background", url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title + " - إيرام 24")}&url=${encodeURIComponent(shareUrl)}` },
     { name: "Facebook", color: "bg-blue-700", url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
@@ -416,12 +422,12 @@ const ArticlePage = () => {
         )}
 
         {/* Source */}
-        {displaySourceUrl && !displaySourceUrl.startsWith("#") && (
-          <a href={displaySourceUrl} target="_blank" rel="noopener noreferrer"
+        {sourceReaderUrl && (
+          <button type="button" onClick={() => setSourceReaderOpen(true)}
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
             <ExternalLink size={13} />
             {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
-          </a>
+          </button>
         )}
 
         {/* Share */}
@@ -444,6 +450,36 @@ const ArticlePage = () => {
           </div>
         </div>
       </article>
+
+      {sourceReaderOpen && sourceReaderUrl && (
+        <div className="fixed inset-0 z-[80] bg-background/96 backdrop-blur-xl animate-fade-in" role="dialog" aria-modal="true" dir={isRTL ? "rtl" : "ltr"}>
+          <div className="h-14 md:h-16 glass-strong border-b border-foreground/10 flex items-center justify-between gap-3 px-3 md:px-5">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[hsl(var(--gold))]">
+                {isRTL ? "قارئ المصدر" : "Source Reader"}
+              </p>
+              <h2 className="font-display text-sm md:text-base text-foreground truncate max-w-[70vw]">
+                {displaySourceName || title}
+              </h2>
+            </div>
+            <button
+              onClick={() => setSourceReaderOpen(false)}
+              aria-label={isRTL ? "إغلاق" : "Close"}
+              className="w-10 h-10 rounded-full bg-foreground/8 hover:bg-[hsl(var(--gold))]/15 hover:text-[hsl(var(--gold))] flex items-center justify-center transition-colors shrink-0"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <iframe
+            title={displaySourceName || title}
+            src={sourceReaderUrl}
+            className="w-full border-0 bg-background"
+            style={{ height: "calc(100vh - 4rem)" }}
+            sandbox="allow-same-origin allow-popups allow-forms"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
 
       {/* Related */}
       {relatedArticles.length > 0 && (
