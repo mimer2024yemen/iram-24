@@ -64,12 +64,12 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/article/${article.id}`;
-    const text = `${decodeHtmlEntities(article.title)} - إيرام برس\n${url}`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+    const text = `${decodeHtmlEntities(article.title)} - إيرام 24`;
     if (navigator.share) {
       try { await navigator.share({ title: decodeHtmlEntities(article.title), text, url }); } catch {}
     } else {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(url);
     }
   };
 

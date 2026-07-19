@@ -6,7 +6,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const SITE_ORIGIN = "https://iram-n.lovable.app";
+const SITE_ORIGIN = Deno.env.get("SITE_ORIGIN") || "https://iram-24.lovable.app";
 const SITE_NAME = "إيرام 24";
 
 const escape = (s: string) =>
@@ -19,6 +19,13 @@ const escape = (s: string) =>
 
 const stripHtml = (s: string) =>
   (s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+const absoluteImage = (image?: string | null) => {
+  if (!image) return "";
+  const clean = image.startsWith("//") ? `https:${image}` : image;
+  if (!/^https?:\/\//i.test(clean)) return "";
+  return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(clean)}`;
+};
 
 const BOT_UA = /(bot|crawler|spider|facebookexternalhit|whatsapp|telegrambot|twitterbot|slackbot|discordbot|linkedinbot|pinterest|embedly|quora link preview|showyoubot|outbrain|w3c_validator|preview|link|scanner|monitor)/i;
 
@@ -53,7 +60,7 @@ Deno.serve(async (req) => {
     const desc = escape(
       stripHtml(data?.description || data?.content || "").slice(0, 200)
     );
-    const image = data?.image_url ? escape(data.image_url) : "";
+    const image = escape(absoluteImage(data?.image_url));
     const lang = data?.language === "EN" ? "en" : "ar";
     const dir = lang === "ar" ? "rtl" : "ltr";
     const published = data?.published_at || "";
@@ -72,13 +79,17 @@ Deno.serve(async (req) => {
 <meta property="og:description" content="${desc}" />
 <meta property="og:url" content="${target}" />
 ${image ? `<meta property="og:image" content="${image}" />
+<meta property="og:image:secure_url" content="${image}" />
 <meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />` : ""}
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="${title}" />` : ""}
 <meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}" />
 <meta name="twitter:title" content="${title}" />
 <meta name="twitter:description" content="${desc}" />
-${image ? `<meta name="twitter:image" content="${image}" />` : ""}
+${image ? `<meta name="twitter:image" content="${image}" />
+<meta name="twitter:image:alt" content="${title}" />` : ""}
 ${published ? `<meta property="article:published_time" content="${escape(published)}" />` : ""}
+${data?.category ? `<meta property="article:section" content="${escape(data.category)}" />` : ""}
 <meta http-equiv="refresh" content="0;url=${target}" />
 <script>window.location.replace(${JSON.stringify(target)});</script>
 </head>

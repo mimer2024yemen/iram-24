@@ -76,13 +76,14 @@ const BreakingNewsBar = ({ language, initialHeadlines = [] }: BreakingNewsBarPro
 
   const separator = settings?.separator_style || "●";
   // End with separator so the loop joins seamlessly with no gap between cycles.
-  const text = headlines.join(`   ${separator}   `) + `   ${separator}   `;
+  const baseText = headlines.join(`   ${separator}   `) + `   ${separator}   `;
+  const text = Array.from({ length: 4 }, () => baseText).join("");
   const direction = settings?.scroll_direction || "rtl";
   const isRTL = direction === "rtl";
-  const animationClass = direction === "ltr" ? "animate-marquee-ltr" : "animate-marquee-rtl";
+  const animationClass = direction === "ltr" ? "animate-marquee-rtl" : "animate-marquee-ltr";
 
   // Medium professional speed: ~34 chars/sec. Clamp 22s–56s.
-  const charsPerSecond = 34;
+  const charsPerSecond = 38;
   const duration = Math.min(56, Math.max(22, Math.round(text.length / charsPerSecond)));
 
   return (

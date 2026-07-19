@@ -69,12 +69,12 @@ const MarketTicker = ({ language }: Props) => {
         {/* Scrolling track */}
         <div className="flex-1 overflow-hidden relative">
           <div
-            className={`flex w-max min-w-full marquee-track ${isRTL ? "animate-marquee-rtl" : "animate-marquee-ltr"}`}
-            style={{ ["--marquee-duration" as string]: `${Math.max(24, Math.min(42, quotes.length * 2.1))}s` }}
+            className={`flex w-max min-w-full marquee-track ${isRTL ? "animate-marquee-ltr" : "animate-marquee-rtl"}`}
+            style={{ ["--marquee-duration" as string]: `${Math.max(28, Math.min(58, quotes.length * 5.2))}s` }}
           >
             {[0, 1].map((copy) => (
               <div key={copy} className="flex items-center gap-7 whitespace-nowrap py-2 px-3 shrink-0 min-w-full" aria-hidden={copy === 1}>
-                {quotes.map((q, i) => {
+                {Array.from({ length: 3 }, () => quotes).flat().map((q, i) => {
                   const up = q.change >= 0;
                   const label = isRTL ? q.label_ar : q.label_en;
                   return (
