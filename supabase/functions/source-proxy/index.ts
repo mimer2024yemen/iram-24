@@ -36,7 +36,7 @@ const absolutize = (value: string, base: string) => {
   try { return new URL(value, base).toString(); } catch { return value; }
 };
 
-function extractReader(html: string, fallbackTitle: string, baseUrl: string, lang: string) {
+function extractReader(html: string, fallbackTitle: string, baseUrl: string, lang: string, proxyBase: string) {
   const title = decodeEntities(
     html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]
     || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]
@@ -55,7 +55,7 @@ function extractReader(html: string, fallbackTitle: string, baseUrl: string, lan
     .map((p) => p.replace(/\s+/g, " ").trim())
     .filter((p) => p.length > 80)
     .slice(0, 24);
-  return readerHtml({ title, image, paragraphs, sourceUrl: baseUrl, lang });
+  return readerHtml({ title, image, paragraphs, sourceUrl: baseUrl, lang, proxyBase });
 }
 
 function readerHtml({ title, image, paragraphs, sourceUrl, lang, proxyBase }: { title: string; image: string; paragraphs: string[]; sourceUrl: string; lang: string; proxyBase: string }) {
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     if (!res.ok) throw new Error(`Upstream ${res.status}`);
     const contentType = res.headers.get("content-type") || "text/html";
     const html = await res.text();
-    const rendered = contentType.includes("text/html") ? proxiedHtml(html, target.toString(), proxyBase, fallbackTitle, lang) : extractReader(html, fallbackTitle, target.toString(), lang);
+    const rendered = contentType.includes("text/html") ? proxiedHtml(html, target.toString(), proxyBase, fallbackTitle, lang) : extractReader(html, fallbackTitle, target.toString(), lang, proxyBase);
     return new Response(rendered, {
       headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300, s-maxage=900" },
     });
