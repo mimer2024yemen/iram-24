@@ -28,7 +28,7 @@ const ArticlePage = () => {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [progress, setProgress] = useState(0);
-  const [sourceReaderOpen, setSourceReaderOpen] = useState(false);
+  
 
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
