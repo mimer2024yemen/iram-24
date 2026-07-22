@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Article, getCachedArticleById, getCachedRelatedArticles } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
-import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Share2, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Share2 } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import LazyImage from "@/components/LazyImage";
 import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
