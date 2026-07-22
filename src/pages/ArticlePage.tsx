@@ -433,12 +433,12 @@ const ArticlePage = () => {
         )}
 
         {/* Source */}
-        {sourceReaderUrl && (
-          <button type="button" onClick={() => setSourceReaderOpen(true)}
+        {hasValidSource && (
+          <a href={displaySourceUrl!} target="_blank" rel="noopener noreferrer"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
             <ExternalLink size={13} />
             {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
-          </button>
+          </a>
         )}
 
         {/* Share */}
