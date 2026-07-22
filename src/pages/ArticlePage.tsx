@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Article, getCachedArticleById, getCachedRelatedArticles } from "@/hooks/useArticles";
 import { timeAgo, decodeHtmlEntities } from "@/lib/newsUtils";
-import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Share2, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Heart, Copy, Check, ExternalLink, Eye, Clock, Share2 } from "lucide-react";
 import { toggleFavorite, getFavorites } from "@/lib/newsUtils";
 import LazyImage from "@/components/LazyImage";
 import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
@@ -28,7 +28,7 @@ const ArticlePage = () => {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [progress, setProgress] = useState(0);
-  const [sourceReaderOpen, setSourceReaderOpen] = useState(false);
+  
 
   const lang = article?.language === "EN" ? "EN" : "AR";
   const isRTL = lang === "AR";
@@ -138,7 +138,7 @@ const ArticlePage = () => {
       setRelatedArticles([]);
       setSourceInfo(null);
       setImgError(false);
-      setSourceReaderOpen(false);
+      
       const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
       const result = await Promise.race([
         supabase.from("articles").select("*").eq("id", id).maybeSingle(),
@@ -255,11 +255,22 @@ const ArticlePage = () => {
   const shouldShowSource = articleShowSource && sourceShowSource;
   const displaySourceName = (sourceInfo?.show_source === false && sourceInfo?.alt_source_name)
     ? sourceInfo.alt_source_name : sourceInfo?.name || null;
-  const displaySourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
+  const rawSourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
     ? sourceInfo.alt_source_url : (shouldShowSource ? article.url : null);
-  const sourceReaderUrl = displaySourceUrl && !displaySourceUrl.startsWith("#")
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/source-proxy?url=${encodeURIComponent(displaySourceUrl)}&title=${encodeURIComponent(title)}&lang=${lang}`
-    : "";
+  // If a proxy URL was somehow saved, extract the real underlying URL
+  const extractOriginalUrl = (u: string | null): string | null => {
+    if (!u) return null;
+    try {
+      const parsed = new URL(u);
+      if (/\/functions\/v1\/(source-proxy|article-proxy|image-proxy)/i.test(parsed.pathname)) {
+        const inner = parsed.searchParams.get("url");
+        if (inner) return decodeURIComponent(inner);
+      }
+    } catch {}
+    return u;
+  };
+  const displaySourceUrl = extractOriginalUrl(rawSourceUrl);
+  const hasValidSource = !!(displaySourceUrl && !displaySourceUrl.startsWith("#") && /^https?:\/\//i.test(displaySourceUrl));
 
   const videoUrl = (article as any).video_url;
   const seoKeywords = (article as any).seo_keywords;
@@ -422,12 +433,12 @@ const ArticlePage = () => {
         )}
 
         {/* Source */}
-        {sourceReaderUrl && (
-          <button type="button" onClick={() => setSourceReaderOpen(true)}
+        {hasValidSource && (
+          <a href={displaySourceUrl!} target="_blank" rel="noopener noreferrer"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
             <ExternalLink size={13} />
             {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
-          </button>
+          </a>
         )}
 
         {/* Share */}
@@ -451,35 +462,6 @@ const ArticlePage = () => {
         </div>
       </article>
 
-      {sourceReaderOpen && sourceReaderUrl && (
-        <div className="fixed inset-0 z-[80] bg-background/96 backdrop-blur-xl animate-fade-in" role="dialog" aria-modal="true" dir={isRTL ? "rtl" : "ltr"}>
-          <div className="h-14 md:h-16 glass-strong border-b border-foreground/10 flex items-center justify-between gap-3 px-3 md:px-5">
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[hsl(var(--gold))]">
-                {isRTL ? "قارئ المصدر" : "Source Reader"}
-              </p>
-              <h2 className="font-display text-sm md:text-base text-foreground truncate max-w-[70vw]">
-                {displaySourceName || title}
-              </h2>
-            </div>
-            <button
-              onClick={() => setSourceReaderOpen(false)}
-              aria-label={isRTL ? "إغلاق" : "Close"}
-              className="w-10 h-10 rounded-full bg-foreground/8 hover:bg-[hsl(var(--gold))]/15 hover:text-[hsl(var(--gold))] flex items-center justify-center transition-colors shrink-0"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <iframe
-            title={displaySourceName || title}
-            src={sourceReaderUrl}
-            className="w-full border-0 bg-background"
-            style={{ height: "calc(100vh - 4rem)" }}
-            sandbox="allow-same-origin allow-popups allow-forms"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      )}
 
       {/* Related */}
       {relatedArticles.length > 0 && (
