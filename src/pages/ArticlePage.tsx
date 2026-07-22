@@ -462,35 +462,6 @@ const ArticlePage = () => {
         </div>
       </article>
 
-      {sourceReaderOpen && sourceReaderUrl && (
-        <div className="fixed inset-0 z-[80] bg-background/96 backdrop-blur-xl animate-fade-in" role="dialog" aria-modal="true" dir={isRTL ? "rtl" : "ltr"}>
-          <div className="h-14 md:h-16 glass-strong border-b border-foreground/10 flex items-center justify-between gap-3 px-3 md:px-5">
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold tracking-[0.28em] uppercase text-[hsl(var(--gold))]">
-                {isRTL ? "قارئ المصدر" : "Source Reader"}
-              </p>
-              <h2 className="font-display text-sm md:text-base text-foreground truncate max-w-[70vw]">
-                {displaySourceName || title}
-              </h2>
-            </div>
-            <button
-              onClick={() => setSourceReaderOpen(false)}
-              aria-label={isRTL ? "إغلاق" : "Close"}
-              className="w-10 h-10 rounded-full bg-foreground/8 hover:bg-[hsl(var(--gold))]/15 hover:text-[hsl(var(--gold))] flex items-center justify-center transition-colors shrink-0"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <iframe
-            title={displaySourceName || title}
-            src={sourceReaderUrl}
-            className="w-full border-0 bg-background"
-            style={{ height: "calc(100vh - 4rem)" }}
-            sandbox="allow-same-origin allow-popups allow-forms"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      )}
 
       {/* Related */}
       {relatedArticles.length > 0 && (
