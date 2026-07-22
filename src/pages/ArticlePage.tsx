@@ -138,7 +138,7 @@ const ArticlePage = () => {
       setRelatedArticles([]);
       setSourceInfo(null);
       setImgError(false);
-      setSourceReaderOpen(false);
+      
       const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
       const result = await Promise.race([
         supabase.from("articles").select("*").eq("id", id).maybeSingle(),
