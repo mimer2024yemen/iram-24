@@ -255,11 +255,22 @@ const ArticlePage = () => {
   const shouldShowSource = articleShowSource && sourceShowSource;
   const displaySourceName = (sourceInfo?.show_source === false && sourceInfo?.alt_source_name)
     ? sourceInfo.alt_source_name : sourceInfo?.name || null;
-  const displaySourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
+  const rawSourceUrl = (sourceInfo?.show_source === false && sourceInfo?.alt_source_url)
     ? sourceInfo.alt_source_url : (shouldShowSource ? article.url : null);
-  const sourceReaderUrl = displaySourceUrl && !displaySourceUrl.startsWith("#")
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/source-proxy?url=${encodeURIComponent(displaySourceUrl)}&title=${encodeURIComponent(title)}&lang=${lang}`
-    : "";
+  // If a proxy URL was somehow saved, extract the real underlying URL
+  const extractOriginalUrl = (u: string | null): string | null => {
+    if (!u) return null;
+    try {
+      const parsed = new URL(u);
+      if (/\/functions\/v1\/(source-proxy|article-proxy|image-proxy)/i.test(parsed.pathname)) {
+        const inner = parsed.searchParams.get("url");
+        if (inner) return decodeURIComponent(inner);
+      }
+    } catch {}
+    return u;
+  };
+  const displaySourceUrl = extractOriginalUrl(rawSourceUrl);
+  const hasValidSource = !!(displaySourceUrl && !displaySourceUrl.startsWith("#") && /^https?:\/\//i.test(displaySourceUrl));
 
   const videoUrl = (article as any).video_url;
   const seoKeywords = (article as any).seo_keywords;
