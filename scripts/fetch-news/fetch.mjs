@@ -29,6 +29,7 @@ const parser = new XMLParser({
   cdataPropName: "#cdata",
   parseTagValue: true,
   trimValues: true,
+  processEntities: false, // tolerate feeds with many HTML entities (Guardian etc.)
 });
 
 // ---------------- helpers ----------------
