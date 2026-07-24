@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getBlockedWords, removeBlockedWords } from "@/lib/blockedWords";
+import { fetchFromCdn } from "@/lib/cdnFeed";
 
 export interface Article {
   id: string;
@@ -163,9 +164,12 @@ export function useArticles(language: "AR" | "EN", category?: string, limit = 30
     const fetchArticles = async (showLoading: boolean) => {
       if (showLoading && articles.length === 0) setLoading(true);
 
-      // Try edge once (it has DB + RSS fallback), then one direct DB fallback.
+      // Priority: (1) GitHub Action CDN JSON — fastest, free, unlimited
+      //           (2) Supabase edge home-feed (DB + RSS)
+      //           (3) direct Supabase query
       for (let attempt = 0; attempt < 2; attempt++) {
-        let data = await fetchEdgeDirect(language, category, limit);
+        let data = await fetchFromCdn(language, category, limit);
+        if (!data || data.length === 0) data = await fetchEdgeDirect(language, category, limit);
         if ((!data || data.length === 0) && attempt === 0) data = await fetchDirect(language, category, limit);
         if (!alive) return;
         if (data && data.length > 0) {
