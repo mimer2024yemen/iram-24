@@ -21,3 +21,7 @@ verify_jwt = false
 [functions.trigger-fetch]
 verify_jwt = false
 
+[functions.read-source]
+verify_jwt = false
+
+
