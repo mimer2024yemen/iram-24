@@ -13,6 +13,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import RadioPage from "./pages/RadioPage";
 import RadioAdmin from "./pages/RadioAdmin";
+import SourceReader from "./pages/SourceReader";
 import NotFound from "./pages/NotFound";
 import { RadioProvider, useRadio } from "./contexts/RadioContext";
 import RadioSheet from "./components/radio/RadioSheet";
@@ -55,6 +56,8 @@ const App = () => (
             <Route path="/" element={<NewsFeed />} />
             <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/reader" element={<SourceReader />} />
+
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin-dashboard-ERAM-SECURE/login" element={<AdminLogin />} />
