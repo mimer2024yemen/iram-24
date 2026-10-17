@@ -135,6 +135,27 @@ export type Database = {
           },
         ]
       }
+      blocked_words: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          word: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          word?: string
+        }
+        Relationships: []
+      }
       breaking_news_settings: {
         Row: {
           auto_refresh: boolean
@@ -349,6 +370,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      slider_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          link_url: string | null
+          position: number
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          link_url?: string | null
+          position?: number
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          link_url?: string | null
+          position?: number
+          title?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
