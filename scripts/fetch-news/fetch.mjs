@@ -16,7 +16,7 @@ const MAX_PER_SHARD = 500;
 const TIMEOUT_MS = 8000;
 const CONCURRENCY = 8;
 
-const UA = "Mozilla/5.0 (compatible; Iram24NewsBot/1.0; +https://iram-24.lovable.app)";
+const UA = "Mozilla/5.0 (compatible; Iram24NewsBot/1.0; +https://iram24.web.app)";
 const HEADERS = {
   "User-Agent": UA,
   "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, text/html;q=0.7, */*;q=0.5",
