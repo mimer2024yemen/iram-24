@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { activeSourceFilter, sourceFetchUrl, validPublishedAt } from "../_shared/sourceRules.ts";
 
 
 const corsHeaders = {
@@ -248,7 +249,7 @@ async function tryWordPressAPI(baseUrl: string) {
   const apiUrl = `${baseUrl.replace(/\/$/, "")}/wp-json/wp/v2/posts?per_page=20&_embed`;
   try {
     const res = await fetch(apiUrl, {
-      headers: { "User-Agent": "EramNews/2.0" },
+      headers: REQUEST_HEADERS,
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;
@@ -275,7 +276,7 @@ function categorize(title: string, desc: string, lang: string, sourceName = ""):
   return classify(`${title} ${sourceName}`, desc, (lang as "AR" | "EN") || "AR").category;
 }
 
-async function loadExistingFingerprints(supabase: ReturnType<typeof createClient>) {
+async function loadExistingFingerprints(supabase: SupabaseClient<any>) {
   const titleKeys = new Set<string>();
   const urlKeys = new Set<string>();
   const pageSize = 1000;
@@ -301,7 +302,7 @@ async function loadExistingFingerprints(supabase: ReturnType<typeof createClient
   return { titleKeys, urlKeys };
 }
 
-async function cleanupDuplicates(supabase: ReturnType<typeof createClient>) {
+async function cleanupDuplicates(supabase: SupabaseClient<any>) {
   const rows: Array<{ id: string; title: string; url: string; published_at: string | null; created_at: string | null }> = [];
   const pageSize = 1000;
 
@@ -363,8 +364,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseKey) throw new Error("Missing server configuration");
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let body: any = {};
@@ -382,10 +384,9 @@ serve(async (req) => {
       });
     }
 
-    let query = supabase.from("news_sources").select("*").eq("is_active", true);
-    if (targetSourceId) query = supabase.from("news_sources").select("*").eq("id", targetSourceId);
-
-    const { data: sources } = await query;
+    const query = supabase.from("news_sources").select("*").match(activeSourceFilter(targetSourceId));
+    const { data: sources, error: sourcesError } = await query;
+    if (sourcesError) throw sourcesError;
     if (!sources || sources.length === 0) {
       return new Response(JSON.stringify({ count: 0, message: "No active sources" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -403,7 +404,7 @@ serve(async (req) => {
 
         // Method 1: Try RSS/Atom feed
         try {
-          const res = await fetch(source.url, {
+          const res = await fetch(sourceFetchUrl(source), {
             headers: REQUEST_HEADERS,
             signal: AbortSignal.timeout(15000),
           });
@@ -421,7 +422,7 @@ serve(async (req) => {
         // Method 2: Fallback to WordPress API
         if (items.length === 0) {
           try {
-            const baseUrl = new URL(source.url).origin;
+            const baseUrl = new URL(sourceFetchUrl(source)).origin;
             const wpItems = await tryWordPressAPI(baseUrl);
             if (wpItems && wpItems.length > 0) {
               items = wpItems;
@@ -441,8 +442,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Limit to last 30 articles
-        items = items.slice(0, 30);
         let sourceInserted = 0;
         let sourceSkipped = 0;
 
@@ -493,14 +492,16 @@ serve(async (req) => {
             video_url: finalVideo,
             category,
             language: source.language,
-            published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+            published_at: validPublishedAt(item.pubDate),
             hash,
-          }, { onConflict: "hash" });
+          }, { onConflict: "hash", ignoreDuplicates: true });
 
           if (!error) {
             sourceInserted++;
             existingFingerprints.titleKeys.add(titleKey);
             existingFingerprints.urlKeys.add(urlKey);
+          } else {
+            throw new Error(`Article import failed: ${error.message}`);
           }
         }
 

@@ -107,7 +107,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("RSS detect error:", error);
-    return new Response(JSON.stringify({ success: false, error: error.message || "Failed to detect RSS" }), {
+    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Failed to detect RSS" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
