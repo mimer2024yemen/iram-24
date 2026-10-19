@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Edit, ToggleLeft, ToggleRight, RefreshCw, Download, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { sourceInput } from "@/lib/sourceInput";
 
 interface Source {
   id: string;
@@ -40,6 +42,7 @@ const SourceManager = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [fetchingSource, setFetchingSource] = useState<string | null>(null);
   const [fetchingAll, setFetchingAll] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);
 
   // Form fields
@@ -56,7 +59,8 @@ const SourceManager = () => {
   const [showAltSource, setShowAltSource] = useState(false);
 
   const fetchSources = async () => {
-    const { data } = await supabase.from("news_sources").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("news_sources").select("*").order("created_at", { ascending: false });
+    if (error) { toast.error("تعذر تحميل المصادر: " + error.message); return; }
     if (data) setSources(data as unknown as Source[]);
   };
 
@@ -73,19 +77,18 @@ const SourceManager = () => {
   };
 
   const handleSave = async () => {
-    if (!name) { toast.error("اسم المصدر مطلوب"); return; }
-    if (!websiteUrl && !feedUrl) { toast.error("أدخل رابط الموقع أو رابط الخلاصة"); return; }
-
-    const finalSlug = slug || generateSlug(name);
-    const url = feedUrl || websiteUrl;
-
-    const payload: any = {
-      name,
+    if (saving) return;
+    let input;
+    try { input = sourceInput(name, websiteUrl, feedUrl, fetchType); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "رابط غير صالح"); return; }
+    const duplicate = sources.some(s => s.id !== editId &&
+      (s.url.trim() === input.url || s.feed_url?.trim() === input.url));
+    if (duplicate) { toast.error("رابط المصدر موجود بالفعل"); return; }
+    setSaving(true);
+    const finalSlug = slug.trim() || generateSlug(input.name) || `source-${crypto.randomUUID()}`;
+    const payload = {
+      ...input,
       slug: finalSlug,
-      url,
-      website_url: websiteUrl || null,
-      feed_url: feedUrl || null,
-      fetch_type: feedUrl ? fetchType : "scraping",
       category: category === "none" ? null : category,
       language,
       show_source: showSource,
@@ -95,13 +98,14 @@ const SourceManager = () => {
 
     if (editId) {
       const { error } = await supabase.from("news_sources").update(payload).eq("id", editId);
-      if (error) { toast.error("خطأ في التحديث"); return; }
+      if (error) { setSaving(false); toast.error("خطأ في التحديث: " + error.message); return; }
       toast.success("تم تحديث المصدر");
     } else {
-      const { error } = await supabase.from("news_sources").insert(payload);
-      if (error) { toast.error("خطأ في الحفظ"); return; }
+      const { error } = await supabase.from("news_sources").insert({ ...payload, is_active: true });
+      if (error) { setSaving(false); toast.error("خطأ في الحفظ: " + error.message); return; }
       toast.success("تم إضافة المصدر");
     }
+    setSaving(false);
     resetForm();
     fetchSources();
   };
@@ -119,12 +123,15 @@ const SourceManager = () => {
   };
 
   const handleToggle = async (id: string, current: boolean) => {
-    await supabase.from("news_sources").update({ is_active: !current }).eq("id", id);
+    const { error } = await supabase.from("news_sources").update({ is_active: !current }).eq("id", id);
+    if (error) { toast.error("تعذر تغيير حالة المصدر: " + error.message); return; }
+    toast.success(current ? "تم تعطيل المصدر مع الاحتفاظ بأخباره" : "تم تفعيل المصدر");
     fetchSources();
   };
 
   const handleToggleShowSource = async (id: string, current: boolean) => {
-    await supabase.from("news_sources").update({ show_source: !current } as any).eq("id", id);
+    const { error } = await supabase.from("news_sources").update({ show_source: !current } as any).eq("id", id);
+    if (error) { toast.error("تعذر تحديث ظهور المصدر"); return; }
     fetchSources();
     toast.success(!current ? "تم إظهار المصدر" : "تم إخفاء المصدر");
   };
@@ -149,7 +156,8 @@ const SourceManager = () => {
     setFetchingSource(sourceId);
     try {
       const res = await supabase.functions.invoke("fetch-news", { body: { source_id: sourceId } });
-      if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد`);
+      if (res.error || res.data?.error || res.data?.logs?.some((log: string) => /ERROR|No articles found/.test(log))) toast.error(res.data?.logs?.join(" • ") || "فشل الجلب");
+      else if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد`);
       else toast.error("فشل الجلب");
     } catch { toast.error("حدث خطأ"); }
     setFetchingSource(null);
@@ -160,7 +168,8 @@ const SourceManager = () => {
     setFetchingAll(true);
     try {
       const res = await supabase.functions.invoke("fetch-news");
-      if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد من جميع المصادر`);
+      if (res.error || res.data?.error || res.data?.logs?.some((log: string) => /ERROR|No articles found/.test(log))) toast.error(res.data?.logs?.join(" • ") || "فشل الجلب");
+      else if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد من جميع المصادر`);
       else toast.error("فشل الجلب");
     } catch { toast.error("حدث خطأ"); }
     setFetchingAll(false);
@@ -178,24 +187,24 @@ const SourceManager = () => {
             <h3 className="text-foreground font-bold text-base">حذف المصدر: {deleteDialog.name}</h3>
             <p className="text-muted-foreground text-sm">هل تريد حذف الأخبار الخاصة بهذا المصدر أيضاً؟</p>
             <div className="space-y-2">
-              <button
+              <Button
                 onClick={() => handleDeleteConfirm(true)}
                 className="w-full py-2.5 bg-destructive text-destructive-foreground rounded-lg text-sm font-medium hover:bg-destructive/90 transition-colors"
               >
                 نعم — حذف المصدر مع كل أخباره
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => handleDeleteConfirm(false)}
                 className="w-full py-2.5 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-accent transition-colors border border-border"
               >
                 لا — حذف المصدر فقط
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setDeleteDialog(null)}
                 className="w-full py-2 text-muted-foreground text-sm hover:text-foreground transition-colors"
               >
                 إلغاء
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -205,15 +214,15 @@ const SourceManager = () => {
       <div className="flex items-center gap-2 flex-wrap justify-between">
         <h2 className="text-foreground font-bold">إدارة المصادر</h2>
         <div className="flex gap-2">
-          <button onClick={handleFetchAll} disabled={fetchingAll}
+          <Button onClick={handleFetchAll} disabled={fetchingAll}
             className="flex items-center gap-1.5 text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
             <Download size={14} className={fetchingAll ? "animate-bounce" : ""} />
             {fetchingAll ? "جاري الجلب..." : "جلب الأخبار الآن"}
-          </button>
-          <button onClick={() => { resetForm(); setShowForm(!showForm); }}
+          </Button>
+          <Button onClick={() => { resetForm(); setShowForm(!showForm); }}
             className="flex items-center gap-1 text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-lg">
             <Plus size={14} /> إضافة مصدر
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -227,38 +236,37 @@ const SourceManager = () => {
           {/* Source Name */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">اسم المصدر *</label>
-            <input value={name} onChange={(e) => setName(e.target.value)}
+            <input aria-label="اسم المصدر" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="مثال: الجزيرة" className={inputClass} />
           </div>
 
           {/* Slug */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">المعرف (Slug)</label>
-            <input value={slug} onChange={(e) => setSlug(e.target.value)}
+            <input aria-label="المعرف" value={slug} onChange={(e) => setSlug(e.target.value)}
               placeholder="اختياري – يتم إنشاؤه تلقائياً من الاسم" className={inputClass} dir="ltr" />
           </div>
 
           {/* Website URL */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">رابط الموقع *</label>
-            <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
+            <input aria-label="رابط الموقع" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
               placeholder="https://example.com" className={inputClass} dir="ltr" />
           </div>
 
           {/* Feed URL */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">رابط الخلاصة (Feed URL)</label>
-            <input value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)}
-              placeholder="https://example.com/feed (اتركه فارغاً → HTML Scraping)" className={inputClass} dir="ltr" />
+            <input aria-label="رابط الخلاصة" value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)}
+              placeholder="https://example.com/feed" className={inputClass} dir="ltr" />
           </div>
 
           {/* Fetch Type & Category row */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">نوع الجلب</label>
-              <select value={feedUrl ? fetchType : "scraping"}
+              <select value={fetchType}
                 onChange={(e) => setFetchType(e.target.value)}
-                disabled={!feedUrl}
                 className={`${inputClass} disabled:opacity-60`}>
                 {FETCH_TYPES.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
@@ -290,23 +298,23 @@ const SourceManager = () => {
               <p className="text-foreground text-sm font-medium">إظهار المصدر الأصلي</p>
               <p className="text-muted-foreground text-[10px]">إخفاء اسم ورابط المصدر من واجهة المستخدم</p>
             </div>
-            <button
+            <Button
               onClick={() => setShowSource(!showSource)}
               className={`relative w-11 h-6 rounded-full transition-colors ${showSource ? 'bg-green-500' : 'bg-muted'}`}
             >
               <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${showSource ? 'right-0.5' : 'right-[22px]'}`} />
-            </button>
+            </Button>
           </div>
 
           {/* Alternative Source */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <button
+            <Button
               onClick={() => setShowAltSource(!showAltSource)}
               className="w-full flex items-center justify-between p-3 bg-card text-foreground text-sm font-medium hover:bg-accent/30 transition-colors"
             >
               <span>➕ إضافة مصدر بديل (اختياري)</span>
               {showAltSource ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+            </Button>
             {showAltSource && (
               <div className="p-3 space-y-2 bg-card/50">
                 <div>
@@ -325,14 +333,14 @@ const SourceManager = () => {
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button onClick={handleSave}
+            <Button onClick={handleSave} disabled={saving}
               className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-              {editId ? "تحديث" : "حفظ"}
-            </button>
-            <button onClick={resetForm}
+              {saving ? "جاري الحفظ..." : editId ? "تحديث" : "حفظ"}
+            </Button>
+            <Button onClick={resetForm}
               className="px-4 py-2.5 text-muted-foreground hover:text-foreground text-sm transition-colors">
               إلغاء
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -340,7 +348,7 @@ const SourceManager = () => {
       {/* Sources List */}
       <div className="space-y-2">
         {sources.map((s) => (
-          <div key={s.id} className="bg-secondary rounded-lg p-3 border border-border/50">
+          <div key={s.id} data-source-id={s.id} className="bg-secondary rounded-lg p-3 border border-border/50">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -372,23 +380,23 @@ const SourceManager = () => {
                 </div>
               </div>
               <div className="flex items-center gap-0.5">
-                <button onClick={() => handleToggleShowSource(s.id, s.show_source !== false)}
+                <Button onClick={() => handleToggleShowSource(s.id, s.show_source !== false)}
                   className="p-1.5 text-muted-foreground hover:text-foreground" title={s.show_source !== false ? "إخفاء المصدر" : "إظهار المصدر"}>
                   {s.show_source !== false ? <Eye size={14} className="text-green-400" /> : <EyeOff size={14} className="text-orange-400" />}
-                </button>
-                <button onClick={() => handleFetchSource(s.id)} disabled={fetchingSource === s.id}
+                </Button>
+                <Button onClick={() => handleFetchSource(s.id)} disabled={fetchingSource === s.id}
                   className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-50" title="جلب يدوي">
                   <RefreshCw size={14} className={fetchingSource === s.id ? "animate-spin" : ""} />
-                </button>
-                <button onClick={() => handleToggle(s.id, s.is_active)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                </Button>
+                <Button aria-label={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} title={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} onClick={() => handleToggle(s.id, s.is_active)} className="p-1.5 text-muted-foreground hover:text-foreground">
                   {s.is_active ? <ToggleRight size={18} className="text-green-400" /> : <ToggleLeft size={18} />}
-                </button>
-                <button onClick={() => handleEdit(s)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                </Button>
+                <Button aria-label="تعديل المصدر" title="تعديل المصدر" onClick={() => handleEdit(s)} className="p-1.5 text-muted-foreground hover:text-foreground">
                   <Edit size={14} />
-                </button>
-                <button onClick={() => setDeleteDialog({ id: s.id, name: s.name })} className="p-1.5 text-muted-foreground hover:text-destructive">
+                </Button>
+                <Button onClick={() => setDeleteDialog({ id: s.id, name: s.name })} className="p-1.5 text-muted-foreground hover:text-destructive">
                   <Trash2 size={14} />
-                </button>
+                </Button>
               </div>
             </div>
           </div>
