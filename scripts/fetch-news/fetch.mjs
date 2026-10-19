@@ -195,18 +195,6 @@ async function loadSources() {
   return await res.json();
 }
 
-// Fallback list if the sources table is unreachable or empty.
-const FALLBACK_SOURCES = [
-  { id: "bbc-ar", name: "BBC عربي", url: "https://feeds.bbci.co.uk/arabic/rss.xml", language: "AR" },
-  { id: "sky-ar", name: "سكاي نيوز عربية", url: "https://www.skynewsarabia.com/rss", language: "AR" },
-  { id: "france24-ar", name: "فرانس 24", url: "https://www.france24.com/ar/rss", language: "AR" },
-  { id: "cnn-ar", name: "CNN عربية", url: "https://arabic.cnn.com/rss", language: "AR" },
-  { id: "aj-ar", name: "الجزيرة", url: "https://www.aljazeera.net/aljazeerarss/a7c186be-1baa-4bd4-9d80-a84951406c8a/73d0e1b4-532f-45ef-b135-bfdff8b8cab9", language: "AR" },
-  { id: "bbc-en", name: "BBC News", url: "https://feeds.bbci.co.uk/news/world/rss.xml", language: "EN" },
-  { id: "guardian-en", name: "The Guardian", url: "https://www.theguardian.com/world/rss", language: "EN" },
-  { id: "reuters-en", name: "Reuters World", url: "https://feeds.reuters.com/reuters/worldNews", language: "EN" },
-];
-
 // ---------------- pipeline ----------------
 async function runParallel(items, fn, limit) {
   const out = [];
@@ -225,8 +213,8 @@ async function loadShard(path) {
   if (!existsSync(path)) return { articles: [] };
   try {
     return JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    return { articles: [] };
+  } catch (error) {
+    throw new Error(`Refusing to overwrite unreadable archive ${path}: ${error.message}`);
   }
 }
 
@@ -236,18 +224,12 @@ async function writeShard(path, obj) {
 }
 
 async function main() {
-  let sources = [];
-  try {
-    sources = await loadSources();
-  } catch (e) {
-    console.warn("[sources] fallback:", e.message);
-  }
-  if (!sources || sources.length === 0) sources = FALLBACK_SOURCES;
+  const sources = await loadSources();
 
   const errors = [];
   const results = await runParallel(sources, async (src) => {
     try {
-      const xml = await fetchWithRetry(src.url);
+      const xml = await fetchWithRetry(src.feed_url?.trim() || src.url.trim());
       const items = parseFeed(xml, src);
       console.log(`[ok] ${src.name}: ${items.length}`);
       return items;

@@ -1,6 +1,7 @@
 import { ArrowRight, Moon, Sun, Bell, BellOff, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import officialImage from "@/assets/iram24-official.jpg.asset.json";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -40,6 +41,10 @@ const Settings = () => {
       </header>
 
       <div className="p-4 space-y-3">
+        <figure className="max-w-xl mx-auto">
+          <img src={officialImage.url} alt="الشعار الرسمي لإيرام 24 — Iram24، موقع إخباري يمني" width={1200} height={600} className="w-full aspect-[2/1] object-cover" />
+          <figcaption className="text-center text-sm text-muted-foreground mt-2">إيرام 24 · Iram24 — موقع إخباري يمني</figcaption>
+        </figure>
         {/* Dark/Light Mode */}
         <button
           onClick={() => setDark(!dark)}
