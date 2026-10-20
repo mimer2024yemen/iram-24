@@ -380,21 +380,21 @@ const SourceManager = () => {
                 </div>
               </div>
               <div className="flex items-center gap-0.5">
-                <Button onClick={() => handleToggleShowSource(s.id, s.show_source !== false)}
+                <Button variant="ghost" size="icon" onClick={() => handleToggleShowSource(s.id, s.show_source !== false)}
                   className="p-1.5 text-muted-foreground hover:text-foreground" title={s.show_source !== false ? "إخفاء المصدر" : "إظهار المصدر"}>
                   {s.show_source !== false ? <Eye size={14} className="text-green-400" /> : <EyeOff size={14} className="text-orange-400" />}
                 </Button>
-                <Button onClick={() => handleFetchSource(s.id)} disabled={fetchingSource === s.id}
+                <Button variant="ghost" size="icon" aria-label="جلب يدوي" onClick={() => handleFetchSource(s.id)} disabled={!s.is_active || fetchingSource === s.id}
                   className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-50" title="جلب يدوي">
                   <RefreshCw size={14} className={fetchingSource === s.id ? "animate-spin" : ""} />
                 </Button>
-                <Button aria-label={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} title={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} onClick={() => handleToggle(s.id, s.is_active)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="icon" aria-label={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} title={s.is_active ? "تعطيل المصدر" : "تفعيل المصدر"} onClick={() => handleToggle(s.id, s.is_active)} className="p-1.5 text-muted-foreground hover:text-foreground">
                   {s.is_active ? <ToggleRight size={18} className="text-green-400" /> : <ToggleLeft size={18} />}
                 </Button>
-                <Button aria-label="تعديل المصدر" title="تعديل المصدر" onClick={() => handleEdit(s)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="icon" aria-label="تعديل المصدر" title="تعديل المصدر" onClick={() => handleEdit(s)} className="p-1.5 text-muted-foreground hover:text-foreground">
                   <Edit size={14} />
                 </Button>
-                <Button onClick={() => setDeleteDialog({ id: s.id, name: s.name })} className="p-1.5 text-muted-foreground hover:text-destructive">
+                <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: s.id, name: s.name })} className="p-1.5 text-muted-foreground hover:text-destructive">
                   <Trash2 size={14} />
                 </Button>
               </div>

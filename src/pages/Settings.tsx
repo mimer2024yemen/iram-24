@@ -42,7 +42,7 @@ const Settings = () => {
 
       <div className="p-4 space-y-3">
         <figure className="max-w-xl mx-auto">
-          <img src={officialImage.url} alt="الشعار الرسمي لإيرام 24 — Iram24، موقع إخباري يمني" width={1200} height={600} className="w-full aspect-[2/1] object-cover" />
+          <img src={`https://iram-24.lovable.app${officialImage.url}`} alt="الشعار الرسمي لإيرام 24 — Iram24، موقع إخباري يمني" width={1200} height={600} className="w-full aspect-[2/1] object-cover" />
           <figcaption className="text-center text-sm text-muted-foreground mt-2">إيرام 24 · Iram24 — موقع إخباري يمني</figcaption>
         </figure>
         {/* Dark/Light Mode */}
