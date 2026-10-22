@@ -240,7 +240,7 @@ async function fetchMarkets() {
   const quotes = await runParallel(MARKET_SYMBOLS, async (s) => {
     try {
       const res = await withTimeout(
-        (signal) => fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s.sym)}?interval=1d&range=5d`, { headers: HEADERS, signal }),
+        (signal) => fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s.sym)}?interval=1d&range=1d`, { headers: HEADERS, signal }),
         TIMEOUT_MS,
       );
       if (!res.ok) return null;
