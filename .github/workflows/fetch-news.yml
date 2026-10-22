@@ -44,5 +44,6 @@ jobs:
             echo "No changes."
           else
             git commit -m "news: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git pull --rebase --autostash || true
             git push
           fi

@@ -186,13 +186,74 @@ function parseFeed(xml, source) {
 }
 
 // ---------------- sources ----------------
-async function loadSources() {
-  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/news_sources?select=*&is_active=eq.true`, {
-    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
-  });
+async function loadSourcesFromBackend() {
+  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("backend credentials not configured");
+  const res = await withTimeout(
+    (signal) => fetch(`${SUPABASE_URL}/rest/v1/news_sources?select=*&is_active=eq.true`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+      signal,
+    }),
+    10000,
+  );
   if (!res.ok) throw new Error(`sources fetch: ${res.status}`);
-  return await res.json();
+  const rows = await res.json();
+  if (!Array.isArray(rows) || rows.length === 0) throw new Error("backend returned no active sources");
+  return rows;
+}
+
+// Backend first (admin edits apply); if it is paused/unreachable, use the
+// committed backup list so news never stops.
+async function loadSources() {
+  try {
+    const rows = await loadSourcesFromBackend();
+    console.log(`[sources] backend: ${rows.length}`);
+    return rows;
+  } catch (e) {
+    console.warn(`[sources] backend unavailable (${e?.message || e}); using ${DATA_DIR}/sources.json`);
+    const json = JSON.parse(await readFile(join(DATA_DIR, "sources.json"), "utf8"));
+    const rows = (json.sources || []).filter((s) => s.is_active !== false && (s.feed_url || s.url));
+    if (rows.length === 0) throw new Error("backup sources.json is empty");
+    return rows;
+  }
+}
+
+// ---------------- markets ----------------
+const MARKET_SYMBOLS = [
+  { sym: "CL=F", label_ar: "نفط WTI", label_en: "WTI Oil", unit: "$" },
+  { sym: "BZ=F", label_ar: "نفط برنت", label_en: "Brent Oil", unit: "$" },
+  { sym: "GC=F", label_ar: "ذهب", label_en: "Gold", unit: "$" },
+  { sym: "SI=F", label_ar: "فضة", label_en: "Silver", unit: "$" },
+  { sym: "^GSPC", label_ar: "S&P 500", label_en: "S&P 500", unit: "" },
+  { sym: "^DJI", label_ar: "داو جونز", label_en: "Dow Jones", unit: "" },
+  { sym: "^IXIC", label_ar: "ناسداك", label_en: "NASDAQ", unit: "" },
+  { sym: "^TASI.SR", label_ar: "تاسي السعودي", label_en: "TASI", unit: "" },
+  { sym: "BTC-USD", label_ar: "بيتكوين", label_en: "Bitcoin", unit: "$" },
+  { sym: "ETH-USD", label_ar: "إيثريوم", label_en: "Ethereum", unit: "$" },
+  { sym: "EURUSD=X", label_ar: "يورو/دولار", label_en: "EUR/USD", unit: "" },
+  { sym: "GBPUSD=X", label_ar: "إسترليني/دولار", label_en: "GBP/USD", unit: "" },
+  { sym: "SAR=X", label_ar: "دولار/ريال سعودي", label_en: "USD/SAR", unit: "" },
+  { sym: "EGP=X", label_ar: "دولار/جنيه مصري", label_en: "USD/EGP", unit: "" },
+  { sym: "AED=X", label_ar: "دولار/درهم إماراتي", label_en: "USD/AED", unit: "" },
+];
+
+async function fetchMarkets() {
+  const quotes = await runParallel(MARKET_SYMBOLS, async (s) => {
+    try {
+      const res = await withTimeout(
+        (signal) => fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s.sym)}?interval=1d&range=5d`, { headers: HEADERS, signal }),
+        TIMEOUT_MS,
+      );
+      if (!res.ok) return null;
+      const meta = (await res.json())?.chart?.result?.[0]?.meta;
+      const price = Number(meta?.regularMarketPrice);
+      const prev = Number(meta?.chartPreviousClose ?? meta?.previousClose);
+      if (!isFinite(price)) return null;
+      const base = isFinite(prev) && prev ? prev : price;
+      const change = price - base;
+      return { symbol: s.sym, label_ar: s.label_ar, label_en: s.label_en, unit: s.unit, price, change, changePct: base ? (change / base) * 100 : 0 };
+    } catch { return null; }
+  }, 5);
+  return quotes.filter(Boolean);
 }
 
 // ---------------- pipeline ----------------
@@ -299,6 +360,13 @@ async function main() {
 
     summary.languages[lang] = { total: merged.length, new: fresh.length, categories: byCat.size };
   }
+
+  // Market prices (only overwrite when we actually got quotes, so the bar never empties)
+  const quotes = await fetchMarkets();
+  if (quotes.length > 0) {
+    await writeShard(join(DATA_DIR, "markets.json"), { updated_at: summary.updated_at, quotes });
+  }
+  summary.markets = quotes.length;
 
   await writeShard(join(DATA_DIR, "status.json"), summary);
   console.log("[done]", JSON.stringify(summary, null, 2));
