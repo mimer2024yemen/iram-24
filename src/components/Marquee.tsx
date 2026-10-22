@@ -39,7 +39,7 @@ const Marquee = ({ children, reverse = false, contentDir = "ltr", speed = 55, ro
     return () => ro.disconnect();
   }, [children, speed]);
 
-  const Row = ({ hidden }: { hidden?: boolean }) => (
+  const renderRow = (hidden: boolean) => (
     <div dir={contentDir} aria-hidden={hidden || undefined} className={`flex shrink-0 items-center whitespace-nowrap ${rowClassName}`}>
       {Array.from({ length: reps }, (_, i) => (
         <div key={i} ref={!hidden && i === 0 ? unitRef : undefined} className="flex shrink-0 items-center">
@@ -55,8 +55,8 @@ const Marquee = ({ children, reverse = false, contentDir = "ltr", speed = 55, ro
         className={`flex w-max marquee-track ${reverse ? "animate-marquee-ltr" : "animate-marquee-rtl"}`}
         style={{ ["--marquee-duration" as string]: `${duration}s` }}
       >
-        <Row />
-        <Row hidden />
+        {renderRow(false)}
+        {renderRow(true)}
       </div>
     </div>
   );
