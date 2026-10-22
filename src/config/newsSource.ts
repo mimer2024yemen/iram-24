@@ -5,7 +5,7 @@
 //
 // Set VITE_CDN_REPO to "owner/repo" of the linked GitHub repository.
 
-export const CDN_REPO = (import.meta.env.VITE_CDN_REPO as string | undefined) || "";
+export const CDN_REPO = (import.meta.env.VITE_CDN_REPO as string | undefined) || "mimer2024yemen/iram-24";
 export const CDN_BRANCH = (import.meta.env.VITE_CDN_BRANCH as string | undefined) || "main";
 
 /** Candidate URLs for a data file, freshest first. */
