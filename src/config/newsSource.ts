@@ -1,15 +1,25 @@
 // Independent news pipeline config.
-// After connecting the project to GitHub (Plus menu → GitHub → Connect project),
-// set CDN_REPO to "owner/repo" of the connected repository. The GitHub Action
-// will commit news JSON to /data in that same repo and jsDelivr serves it for free.
+// The GitHub Action (.github/workflows/fetch-news.yml) commits news + market JSON
+// to /data in the linked public repository. The site reads it directly, so news
+// keeps flowing even when the main backend is paused.
 //
-// Leave as empty string to disable CDN and keep using Supabase + RSS fallback.
+// Set VITE_CDN_REPO to "owner/repo" of the linked GitHub repository.
 
 export const CDN_REPO = (import.meta.env.VITE_CDN_REPO as string | undefined) || "";
 export const CDN_BRANCH = (import.meta.env.VITE_CDN_BRANCH as string | undefined) || "main";
 
+/** Candidate URLs for a data file, freshest first. */
+export function cdnUrls(path: string): string[] {
+  if (!CDN_REPO) return [];
+  const clean = path.replace(/^\/+/, "");
+  return [
+    // raw.githubusercontent: ~5 min cache, CORS enabled
+    `https://raw.githubusercontent.com/${CDN_REPO}/${CDN_BRANCH}/${clean}`,
+    // jsDelivr: global CDN, longer cache — used only as a backup
+    `https://cdn.jsdelivr.net/gh/${CDN_REPO}@${CDN_BRANCH}/${clean}`,
+  ];
+}
+
 export function cdnUrl(path: string): string | null {
-  if (!CDN_REPO) return null;
-  // jsDelivr serves any public GitHub repo with automatic gzip + global CDN.
-  return `https://cdn.jsdelivr.net/gh/${CDN_REPO}@${CDN_BRANCH}/${path.replace(/^\/+/, "")}`;
+  return cdnUrls(path)[0] || null;
 }
