@@ -1,9 +1,12 @@
 name: fetch-news
 
+# Free, always-on news fetcher (public repo => unlimited Actions minutes).
+# One run loops for ~5.5 hours, fetching every 3 minutes, then re-starts itself.
+# The schedule below is only a safety net in case the chain ever breaks.
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes (GitHub minimum)
-  workflow_dispatch: {}      # allow manual trigger from admin panel
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
 
 concurrency:
   group: fetch-news
@@ -11,15 +14,16 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 50
 
       - uses: actions/setup-node@v4
         with:
@@ -29,21 +33,31 @@ jobs:
         working-directory: scripts/fetch-news
         run: npm install --no-audit --no-fund --loglevel=error
 
-      - name: Run pipeline
+      - name: Fetch loop
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/fetch-news/fetch.mjs
-
-      - name: Commit updated data
         run: |
           git config user.name "iram24-news-bot"
           git config user.email "bot@iram24.local"
-          git add data
-          if git diff --staged --quiet; then
-            echo "No changes."
-          else
-            git commit -m "news: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git pull --rebase --autostash || true
-            git push
-          fi
+          end=$((SECONDS + 330 * 60))
+          while [ $SECONDS -lt $end ]; do
+            git pull --rebase --autostash -q || git rebase --abort || true
+            node scripts/fetch-news/fetch.mjs || echo "::warning::fetch run failed, retrying next cycle"
+            git add data
+            if ! git diff --staged --quiet; then
+              git commit -q -m "news: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+              for i in 1 2 3; do
+                git pull --rebase -q && git push -q && break
+                git rebase --abort 2>/dev/null || true
+                sleep 5
+              done
+            fi
+            sleep 180
+          done
+
+      - name: Restart the loop
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run fetch-news.yml --ref "${{ github.ref_name }}" || echo "restart request failed; schedule will resume"
