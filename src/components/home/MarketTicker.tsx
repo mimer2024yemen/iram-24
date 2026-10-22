@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Marquee from "@/components/Marquee";
+import { fetchCdnMarkets } from "@/lib/cdnFeed";
 
 const MARKET_CACHE_KEY = "eram_market_quotes_v2";
 
@@ -32,14 +33,19 @@ const MarketTicker = ({ language }: Props) => {
 
   useEffect(() => {
     let cancelled = false;
+    const save = (q: Quote[]) => {
+      if (cancelled || !q?.length) return;
+      setQuotes(q);
+      try { localStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(q)); } catch {}
+    };
     const load = async () => {
+      // Main backend first; if it is unavailable use the free GitHub copy.
       try {
-        const { data } = await supabase.functions.invoke("market-prices");
-        if (!cancelled && data?.quotes?.length) {
-          setQuotes(data.quotes);
-          try { localStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(data.quotes)); } catch {}
-        }
-      } catch {/* ignore */}
+        const { data, error } = await supabase.functions.invoke("market-prices");
+        if (!error && data?.quotes?.length) { save(data.quotes); return; }
+      } catch {/* fall through */}
+      const backup = await fetchCdnMarkets();
+      if (backup) save(backup as Quote[]);
     };
     load();
     const id = setInterval(load, 90_000);

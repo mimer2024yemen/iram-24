@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 import Marquee from "@/components/Marquee";
+import { fetchFromCdn } from "@/lib/cdnFeed";
 
 const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
 
@@ -26,6 +27,17 @@ const DEFAULT_SETTINGS: BreakingSettings = {
 };
 
 async function fetchHomeHeadlines(language: "AR" | "EN") {
+  // Ask the main backend and the free GitHub copy at the same time; prefer the backend.
+  const [live, backup] = await Promise.all([fetchBackendHeadlines(language), fetchCdnHeadlines(language)]);
+  return live.length > 0 ? live : backup;
+}
+
+async function fetchCdnHeadlines(language: "AR" | "EN") {
+  const rows = await fetchFromCdn(language, undefined, 10);
+  return (rows || []).map((a) => decodeHtmlEntities(a.title || "")).filter(Boolean).slice(0, 10);
+}
+
+async function fetchBackendHeadlines(language: "AR" | "EN") {
   try {
     const params = new URLSearchParams({ lang: language, limit: "10" });
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`, {
