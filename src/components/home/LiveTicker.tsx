@@ -1,6 +1,7 @@
 import { Article } from "@/hooks/useArticles";
 import { useNavigate } from "react-router-dom";
 import { decodeHtmlEntities, timeAgo } from "@/lib/newsUtils";
+import Marquee from "@/components/Marquee";
 
 interface Props {
   articles: Article[];
@@ -14,35 +15,6 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
   const isRTL = language === "AR";
   const items = articles.slice(0, 10);
 
-  // Medium global-news speed, never sluggish.
-  const duration = Math.min(50, Math.max(24, items.length * 3.5));
-  const animationClass = isRTL ? "animate-marquee-ltr" : "animate-marquee-rtl";
-
-  const Row = ({ ariaHidden = false }: { ariaHidden?: boolean }) => (
-    <div className="flex items-center gap-8 px-5 py-2.5 whitespace-nowrap shrink-0 min-w-full" aria-hidden={ariaHidden}>
-      {Array.from({ length: 3 }, () => items).flat().map((a, i) => (
-        <button
-          key={`${ariaHidden ? "b" : "a"}-${a.id}-${i}`}
-          onClick={() => {
-            if (ariaHidden) return;
-            onBeforeNavigate?.();
-            navigate(`/article/${a.id}`);
-          }}
-          className="flex items-center gap-3 group"
-        >
-          <span className="text-[hsl(var(--gold))] text-[11px] font-bold tracking-wider uppercase shrink-0">
-            {timeAgo(a.published_at, language)}
-          </span>
-          <span className="text-white text-[13px] font-medium group-hover:text-[hsl(var(--gold))] transition-colors max-w-[320px] truncate">
-            {decodeHtmlEntities(a.title)}
-          </span>
-          {i < items.length * 3 - 1 && <span className="text-white/30">·</span>}
-        </button>
-      ))}
-      <span className="text-white/30">·</span>
-    </div>
-  );
-
   return (
     <div className="bg-[hsl(var(--ink))] text-white" dir={isRTL ? "rtl" : "ltr"}>
       <div className="max-w-screen-xl mx-auto flex items-stretch">
@@ -52,15 +24,26 @@ const LiveTicker = ({ articles, language, onBeforeNavigate }: Props) => {
             {isRTL ? "مباشر" : "LIVE"}
           </span>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <div
-            className={`flex w-max min-w-full marquee-track ${animationClass}`}
-            style={{ ["--marquee-duration" as string]: `${duration}s` }}
-          >
-            <Row />
-            <Row ariaHidden />
-          </div>
-        </div>
+        <Marquee reverse={isRTL} contentDir={isRTL ? "rtl" : "ltr"} speed={50} rowClassName="py-2.5">
+          {items.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => {
+                onBeforeNavigate?.();
+                navigate(`/article/${a.id}`);
+              }}
+              className="flex items-center gap-3 group px-4 shrink-0"
+            >
+              <span className="text-[hsl(var(--gold))] text-[11px] font-bold tracking-wider uppercase shrink-0">
+                {timeAgo(a.published_at, language)}
+              </span>
+              <span className="text-white text-[13px] font-medium group-hover:text-[hsl(var(--gold))] transition-colors max-w-[320px] truncate">
+                {decodeHtmlEntities(a.title)}
+              </span>
+              <span className="text-white/30 ps-4">·</span>
+            </button>
+          ))}
+        </Marquee>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import Marquee from "@/components/Marquee";
 
 const MARKET_CACHE_KEY = "eram_market_quotes_v2";
 
@@ -67,37 +68,31 @@ const MarketTicker = ({ language }: Props) => {
         </div>
 
         {/* Scrolling track */}
-        <div className="flex-1 overflow-hidden relative">
-          <div
-            className={`flex w-max min-w-full marquee-track ${isRTL ? "animate-marquee-ltr" : "animate-marquee-rtl"}`}
-            style={{ ["--marquee-duration" as string]: `${Math.max(28, Math.min(58, quotes.length * 5.2))}s` }}
-          >
-            {[0, 1].map((copy) => (
-              <div key={copy} className="flex items-center gap-7 whitespace-nowrap py-2 px-3 shrink-0 min-w-full" aria-hidden={copy === 1}>
-                {Array.from({ length: 3 }, () => quotes).flat().map((q, i) => {
-                  const up = q.change >= 0;
-                  const label = isRTL ? q.label_ar : q.label_en;
-                  return (
-                    <span key={`${copy}-${q.symbol}-${i}`} className="flex items-center gap-2 text-[12px] md:text-[13px] tabular-nums">
-                      <span className="text-white/90 font-bold tracking-wide">{label}</span>
-                      <span className="text-white font-display font-semibold">
-                        {q.unit}{formatNum(q.price)}
-                      </span>
-                      <span
-                        className={`flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded ${
-                          up ? "text-emerald-300 bg-emerald-500/10" : "text-rose-300 bg-rose-500/10"
-                        }`}
-                      >
-                        {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                        {up ? "+" : ""}{q.changePct.toFixed(2)}%
-                      </span>
-                      <span className="text-[hsl(var(--gold))]/40">•</span>
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+        <div className="flex-1 min-w-0 relative flex">
+          <Marquee reverse={isRTL} contentDir={isRTL ? "rtl" : "ltr"} speed={45} rowClassName="py-2">
+            {quotes.map((q) => {
+              const up = q.change >= 0;
+              const label = isRTL ? q.label_ar : q.label_en;
+              return (
+                <span key={q.symbol} className="flex items-center gap-2 text-[12px] md:text-[13px] tabular-nums px-3.5">
+                  <span className="text-white/90 font-bold tracking-wide">{label}</span>
+                  <span className="text-white font-display font-semibold" dir="ltr">
+                    {q.unit}{formatNum(q.price)}
+                  </span>
+                  <span
+                    dir="ltr"
+                    className={`flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded ${
+                      up ? "text-emerald-300 bg-emerald-500/10" : "text-rose-300 bg-rose-500/10"
+                    }`}
+                  >
+                    {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                    {up ? "+" : ""}{q.changePct.toFixed(2)}%
+                  </span>
+                  <span className="text-[hsl(var(--gold))]/40 ps-3.5">•</span>
+                </span>
+              );
+            })}
+          </Marquee>
           {/* Edge fades */}
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[hsl(220_50%_5%)] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[hsl(220_50%_5%)] to-transparent" />

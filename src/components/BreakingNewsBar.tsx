@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
+import Marquee from "@/components/Marquee";
 
 const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
 
@@ -75,16 +76,8 @@ const BreakingNewsBar = ({ language, initialHeadlines = [] }: BreakingNewsBarPro
   if (headlines.length === 0) return null;
 
   const separator = settings?.separator_style || "●";
-  // End with separator so the loop joins seamlessly with no gap between cycles.
-  const baseText = headlines.join(`   ${separator}   `) + `   ${separator}   `;
-  const text = Array.from({ length: 4 }, () => baseText).join("");
   const direction = settings?.scroll_direction || "rtl";
-  const isRTL = direction === "rtl";
-  const animationClass = direction === "ltr" ? "animate-marquee-rtl" : "animate-marquee-ltr";
-
-  // Medium professional speed: ~34 chars/sec. Clamp 22s–56s.
-  const charsPerSecond = 38;
-  const duration = Math.min(56, Math.max(22, Math.round(text.length / charsPerSecond)));
+  const isRTL = language === "AR";
 
   return (
     <div className="bg-primary overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
@@ -93,15 +86,13 @@ const BreakingNewsBar = ({ language, initialHeadlines = [] }: BreakingNewsBarPro
           <span className="animate-pulse-live">⚡</span>
           {language === "AR" ? "عاجل" : "BREAKING"}
         </span>
-        <div className="overflow-hidden flex-1 min-w-0">
-          <div
-            className={`flex w-max min-w-full whitespace-nowrap marquee-track ${animationClass}`}
-            style={{ ["--marquee-duration" as string]: `${duration}s` }}
-          >
-            <span className="text-primary-foreground text-xs px-3 shrink-0 min-w-full">{text}</span>
-            <span className="text-primary-foreground text-xs px-3 shrink-0 min-w-full" aria-hidden="true">{text}</span>
-          </div>
-        </div>
+        <Marquee reverse={direction === "rtl"} contentDir={isRTL ? "rtl" : "ltr"} speed={50}>
+          {headlines.slice(0, 10).map((h, i) => (
+            <span key={i} className="text-primary-foreground text-xs px-3 shrink-0">
+              {h}<span className="ps-6 opacity-70">{separator}</span>
+            </span>
+          ))}
+        </Marquee>
       </div>
     </div>
   );
