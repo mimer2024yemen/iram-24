@@ -1,0 +1,131 @@
+{
+ "note": "Backup source list used by the free GitHub fetcher when the main backend is unreachable.",
+ "sources": [
+  {
+   "id": "d37a242c-6e72-4257-b208-f951d9018002",
+   "name": "BBC",
+   "url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml ",
+   "feed_url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml ",
+   "language": "EN",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "5a72d363-f878-40ca-a5e6-eec81ea097dd",
+   "name": "Washington",
+   "url": "https://feeds.washingtonpost.com/rss/national",
+   "feed_url": "https://feeds.washingtonpost.com/rss/national",
+   "language": "EN",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "c0bb0ebd-d108-470e-bf2d-c27ddfc5108c",
+   "name": "Aawsat",
+   "url": "https://aawsat.com/feed",
+   "feed_url": "https://aawsat.com/feed",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "54bddcb0-f046-45bd-b620-15a6f2d84db6",
+   "name": "العربية",
+   "url": "https://rsshub.pseudoyu.com/twitter/user/AlArabiya_Brk",
+   "feed_url": "https://rsshub.pseudoyu.com/twitter/user/AlArabiya_Brk",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "38392181-3f9d-4bb2-b06b-f0703c9ba465",
+   "name": "Usa",
+   "url": "https://www.usatoday.com/",
+   "feed_url": "https://www.usatoday.com/",
+   "language": "EN",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "e6a03adb-79c0-4ced-b5e6-de7f967487e3",
+   "name": "الجزيرة",
+   "url": "https://www.aljazeera.net/feed",
+   "feed_url": "https://www.aljazeera.net/feed",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "605f97c1-f8e5-4af9-857f-4aeac0847901",
+   "name": "سكاي",
+   "url": "https://rsshub.pseudoyu.com/twitter/user/SkyNewsArabia_B",
+   "feed_url": "https://rsshub.pseudoyu.com/twitter/user/SkyNewsArabia_B",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "6b57be7f-8574-44d2-92fd-44d8eff559d7",
+   "name": "فرانس",
+   "url": "https://rsshub.pseudoyu.com/twitter/user/France24_ar",
+   "feed_url": "https://rsshub.pseudoyu.com/twitter/user/France24_ar",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "646434a8-43bd-4827-8fad-9ba8ee312bf0",
+   "name": "السعودية",
+   "url": "https://rsshub.pseudoyu.com/twitter/user/SaudiNews50",
+   "feed_url": "https://rsshub.pseudoyu.com/twitter/user/SaudiNews50",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "6420787a-f3ab-48be-acc7-f09e2ad3780b",
+   "name": "الحدث",
+   "url": "https://rsshub.pseudoyu.com/twitter/user/Alhadath_Ymn/rss",
+   "feed_url": "https://rsshub.pseudoyu.com/twitter/user/Alhadath_Ymn/rss",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "france24-ar",
+   "name": "فرانس 24",
+   "url": "https://www.france24.com/ar/",
+   "feed_url": "https://www.france24.com/ar/rss",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "bbc-arabic",
+   "name": "بي بي سي عربي",
+   "url": "https://www.bbc.com/arabic",
+   "feed_url": "https://feeds.bbci.co.uk/arabic/rss.xml",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "skynews-ar",
+   "name": "سكاي نيوز عربية",
+   "url": "https://www.skynewsarabia.com/",
+   "feed_url": "https://www.skynewsarabia.com/rss",
+   "language": "AR",
+   "category": null,
+   "is_active": true
+  },
+  {
+   "id": "bbc-world",
+   "name": "BBC World",
+   "url": "https://www.bbc.com/news/world",
+   "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+   "language": "EN",
+   "category": null,
+   "is_active": true
+  }
+ ]
+}
