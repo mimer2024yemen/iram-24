@@ -9,6 +9,7 @@ import LazyImage from "@/components/LazyImage";
 import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
+import { fetchCdnArticleContent } from "@/lib/cdnFeed";
 
 interface SourceInfo {
   name: string;
@@ -139,12 +140,27 @@ const ArticlePage = () => {
       setSourceInfo(null);
       setImgError(false);
       
+      const isRss = id.startsWith("rss-");
+      // Free GitHub copy: full article text for "rss-" articles (also opens shared links directly).
+      const bodyPromise = isRss ? fetchCdnArticleContent(id) : Promise.resolve(null);
       const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
-      const result = await Promise.race([
+      const result = isRss ? { data: null } : await Promise.race([
         supabase.from("articles").select("*").eq("id", id).maybeSingle(),
         timer,
       ]);
-      const data = result.data || getCachedArticleById(id);
+      let data: any = result.data || getCachedArticleById(id);
+      if (isRss) {
+        const body = await bodyPromise;
+        if (body) {
+          const base = data || body.article;
+          const hero = normalizeImageUrl(base.image_url || "");
+          const extraImages = body.images.filter((src) => normalizeImageUrl(src) !== hero);
+          const fullContent = body.text.length > 0
+            ? [...extraImages.map((src) => `<img src="${src.replace(/"/g, "%22")}">`), ...body.text].join("\n")
+            : null;
+          data = { ...body.article, ...base, content: fullContent || base.content || null };
+        }
+      }
       if (data) {
         setArticle(data as any);
         setRelatedArticles(getCachedRelatedArticles(data as any, 6));
