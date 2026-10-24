@@ -225,7 +225,7 @@ async function loadSources() {
 const CONTENT_PER_RUN = Number(process.env.CONTENT_PER_RUN || 45);
 const SKIP_HOSTS = /(^|\.)(x\.com|twitter\.com|t\.co|youtube\.com|youtu\.be|facebook\.com|instagram\.com|t\.me)$/i;
 const NOISE_ANY = /(من الضروري السماح بجمع|ملفات تعريف الارتباط|cookies? (policy|settings)|تخطَّ|تخط مقاطع|انتهى المحتوى|نهاية المحتوى|All rights reserved|جميع الحقوق محفوظة|©)/i;
-const NOISE = /^(نشرت في|تاريخ النشر|آخر تحديث|التعليق على الصورة|الصورة،|مصدر الصورة|Image source|Image caption|اقرأ أيضا|اقرأ أيضاً|إقرأ أيضاً|اقرأ المزيد|المزيد:|شاهد أيضا|تابعونا|اشترك|Read more|Read also|Sign up|Subscribe|Advertisement|إعلان)/i;
+const NOISE = /^(نشرت في|نُشر:|نشر:|تاريخ النشر|آخر تحديث|التعليق على الصورة|الصورة،|مصدر الصورة|Image source|Image caption|اقرأ أيضا|اقرأ أيضاً|إقرأ أيضاً|اقرأ المزيد|المزيد:|شاهد أيضا|تابعونا|اشترك|Read more|Read also|Sign up|Subscribe|Advertisement|إعلان)/i;
 
 function absoluteUrl(src, base) {
   try { return new URL(src, base).href; } catch { return null; }
