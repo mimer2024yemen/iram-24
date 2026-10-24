@@ -8,8 +8,29 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
-import { Readability } from "@mozilla/readability";
-import { parseHTML } from "linkedom";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+// Optional deps for full-article extraction. A long-running Action loop may pull
+// this file before its deps are installed, so install on demand and never let a
+// missing package stop news fetching.
+let Readability = null;
+let parseHTML = null;
+async function loadExtractors() {
+  try {
+    ({ Readability } = await import("@mozilla/readability"));
+    ({ parseHTML } = await import("linkedom"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+if (!(await loadExtractors())) {
+  try {
+    execSync("npm install --no-audit --no-fund --loglevel=error", { cwd: dirname(fileURLToPath(import.meta.url)), stdio: "ignore", timeout: 120000 });
+  } catch { /* ignore */ }
+  if (!(await loadExtractors())) console.warn("[content] extractor packages unavailable; skipping full text this run");
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -234,7 +255,7 @@ function absoluteUrl(src, base) {
 export async function extractArticle(url) {
   let host = "";
   try { host = new URL(url).hostname; } catch { return null; }
-  if (SKIP_HOSTS.test(host)) return null;
+  if (SKIP_HOSTS.test(host) || !Readability || !parseHTML) return null;
   const html = await fetchWithRetry(url, 2);
   const { document } = parseHTML(html);
   const parsed = new Readability(document, { charThreshold: 250 }).parse();
@@ -261,6 +282,7 @@ export async function extractArticle(url) {
 }
 
 async function fillContent(lang, articles) {
+  if (!Readability || !parseHTML) return { attempted: 0, full: 0 };
   const dir = join(DATA_DIR, lang, "content");
   const todo = articles.filter((a) => a.fingerprint && a.url && !existsSync(join(dir, `${a.fingerprint}.json`))).slice(0, CONTENT_PER_RUN);
   let ok = 0;
