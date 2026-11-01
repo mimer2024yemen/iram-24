@@ -7,3 +7,4 @@
 - [ ] Confirm external GitHub sync/push: project Git sync status unavailable to agent; no manual git mutations permitted.- [x] Tickers blank on RTL fixed (shared Marquee) and verified live.
 - [x] Free GitHub fetcher no longer needs the backend (backup source list + market prices), site/tickers read GitHub data.
 - [x] Site reads public repo mimer2024yemen/iram-24; self-restarting GitHub fetch loop; published to iram24.web.app and verified news + bars.
+- [x] Full article text: fetcher extracts the whole article from the source page; article page shows it; published to iram24.web.app.
