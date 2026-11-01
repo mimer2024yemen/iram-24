@@ -154,7 +154,7 @@ const ArticlePage = () => {
         if (body) {
           const base = data || body.article;
           const hero = normalizeImageUrl(base.image_url || "");
-          const extraImages = body.images.filter((src) => normalizeImageUrl(src) !== hero);
+          const extraImages = body.images.filter((src) => normalizeImageUrl(src) !== hero).slice(0, 3);
           const fullContent = body.text.length > 0
             ? [...extraImages.map((src) => `<img src="${src.replace(/"/g, "%22")}">`), ...body.text].join("\n")
             : null;
