@@ -10,6 +10,7 @@ import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
 import { fetchCdnArticleContent } from "@/lib/cdnFeed";
+import { articleShareUrl, EDGE_FUNCTIONS_ENABLED } from "@/config/backend";
 
 interface SourceInfo {
   name: string;

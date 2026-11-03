@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 import Marquee from "@/components/Marquee";
 import { fetchFromCdn } from "@/lib/cdnFeed";
+import { edgeUrl } from "@/config/backend";
 
 const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
 

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/config/backend";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";

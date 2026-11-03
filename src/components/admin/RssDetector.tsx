@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/config/backend";
 import { Search, Plus, Loader2, ExternalLink } from "lucide-react";
 

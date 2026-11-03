@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/config/backend";
 import Marquee from "@/components/Marquee";
 import { fetchCdnMarkets } from "@/lib/cdnFeed";

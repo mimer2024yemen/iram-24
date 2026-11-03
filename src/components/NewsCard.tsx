@@ -5,6 +5,7 @@ import { classify, normalizeCategory } from "@/lib/classifier";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
+import { articleShareUrl } from "@/config/backend";
 import { normalizeImageUrl } from "@/lib/contentParser";
 import LazyImage from "@/components/LazyImage";
 import { categoryStyle } from "@/lib/categoryColors";
