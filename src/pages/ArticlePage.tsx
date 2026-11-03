@@ -216,7 +216,7 @@ const ArticlePage = () => {
 
   const isFav = favs.includes(article.id);
   // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
-  const shareUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+  const shareUrl = articleShareUrl(article.id);
   const title = decodeHtmlEntities(article.title);
   const shareText = `${title} - إيرام 24`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };

@@ -3,7 +3,9 @@
  * hotlink protection, CORS blocks, and missing Referer headers.
  */
 
-const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-proxy`;
+import { edgeUrl } from "@/config/backend";
+
+const PROXY_BASE = edgeUrl("image-proxy");
 
 /** Domains known to block direct hotlinking */
 const BLOCKED_DOMAINS = [
@@ -29,7 +31,7 @@ function needsProxy(url: string): boolean {
 
 export function proxyImageUrl(url: string): string {
   if (!url) return url;
-  if (needsProxy(url)) {
+  if (PROXY_BASE && needsProxy(url)) {
     return `${PROXY_BASE}?url=${encodeURIComponent(url)}`;
   }
   return url;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { fetchCdnStatus } from "@/lib/cdnFeed";
 import { CDN_REPO } from "@/config/newsSource";
 import { RefreshCw, CheckCircle, Eraser, Cloud, AlertTriangle } from "lucide-react";
@@ -25,7 +26,7 @@ const FetchControl = () => {
     setFetching(true);
     setResult(null);
     try {
-      const res = await supabase.functions.invoke("fetch-news");
+      const res = await invokeEdge("fetch-news");
       setResult(res.data ? `تم جلب ${res.data.count || 0} مقال جديد` : "حدث خطأ أثناء الجلب");
     } catch {
       setResult("حدث خطأ أثناء الجلب");
@@ -38,7 +39,7 @@ const FetchControl = () => {
     setDispatching(true);
     setResult(null);
     try {
-      const res = await supabase.functions.invoke("trigger-fetch");
+      const res = await invokeEdge("trigger-fetch");
       if (res.data?.ok) {
         setResult("تم إطلاق GitHub Action — ستظهر الأخبار خلال دقيقة");
         setTimeout(loadSettings, 60000);
@@ -55,7 +56,7 @@ const FetchControl = () => {
     setCleaning(true);
     setResult(null);
     try {
-      const res = await supabase.functions.invoke("fetch-news", { body: { action: "cleanup_duplicates" } });
+      const res = await invokeEdge("fetch-news", { body: { action: "cleanup_duplicates" } });
       setResult(res.data
         ? `تم حذف ${res.data.removedCount || 0} خبر مكرر ضمن ${res.data.duplicateGroups || 0} مجموعة`
         : "تعذر تنظيف الأخبار المكررة");

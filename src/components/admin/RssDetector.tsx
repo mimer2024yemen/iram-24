@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { Search, Plus, Loader2, ExternalLink } from "lucide-react";
 
 interface DetectedFeed {
@@ -24,7 +25,7 @@ const RssDetector = ({ onAddSource }: RssDetectorProps) => {
     setError(null);
     setFeeds([]);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("detect-rss", {
+      const { data, error: fnError } = await invokeEdge("detect-rss", {
         body: { url: url.trim() },
       });
       if (fnError) throw fnError;
