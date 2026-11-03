@@ -4,3 +4,4 @@ Disallow: /admin-dashboard-ERAM-SECURE
 Disallow: /radio/admin
 
 Sitemap: https://iram24.web.app/sitemap.xml
+Sitemap: https://iram24.web.app/sitemap-news.xml
