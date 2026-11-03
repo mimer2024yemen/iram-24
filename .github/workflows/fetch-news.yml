@@ -43,6 +43,7 @@ jobs:
           end=$((SECONDS + 330 * 60))
           while [ $SECONDS -lt $end ]; do
             git pull --rebase --autostash -q || git rebase --abort || true
+            (cd scripts/fetch-news && npm install --no-audit --no-fund --loglevel=error >/dev/null 2>&1) || true
             node scripts/fetch-news/fetch.mjs || echo "::warning::fetch run failed, retrying next cycle"
             git add data
             if ! git diff --staged --quiet; then

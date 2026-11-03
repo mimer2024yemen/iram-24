@@ -97,3 +97,30 @@ export async function fetchCdnStatus(): Promise<{
 } | null> {
   return await fetchJson("data/status.json");
 }
+
+export interface CdnArticleBody {
+  article: Article;
+  text: string[];
+  images: string[];
+  full: boolean;
+}
+
+/** Full article text saved by the pipeline for "rss-<fingerprint>" articles. */
+export async function fetchCdnArticleContent(id: string, language?: string): Promise<CdnArticleBody | null> {
+  if (!id.startsWith("rss-")) return null;
+  const fp = id.slice(4);
+  if (!/^[a-z0-9]{6,64}$/i.test(fp)) return null;
+  const langs = language === "EN" ? ["EN", "AR"] : ["AR", "EN"];
+  for (const lang of langs) {
+    const json = await fetchJson(`data/${lang}/content/${fp}.json`, 6000);
+    if (json && typeof json === "object") {
+      return {
+        article: normalizeCdnRow(json as CdnRow),
+        text: Array.isArray(json.text) ? json.text.filter((t: unknown) => typeof t === "string") : [],
+        images: Array.isArray(json.images) ? json.images.filter((t: unknown) => typeof t === "string") : [],
+        full: !!json.full,
+      };
+    }
+  }
+  return null;
+}
