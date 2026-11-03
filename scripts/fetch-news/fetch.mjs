@@ -10,6 +10,8 @@ import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { syncArticles, recordRun } from "./supabaseSync.mjs";
+import { prepareDataBranch, publishDataBranch } from "./dataBranch.mjs";
 
 // Optional deps for full-article extraction. A long-running Action loop may pull
 // this file before its deps are installed, so install on demand and never let a
@@ -34,7 +36,9 @@ if (!(await loadExtractors())) {
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const DATA_DIR = process.env.DATA_DIR || "data";
+let DATA_DIR = process.env.DATA_DIR || "data";
+// In GitHub Actions the JSON goes to the separate "data" branch (never main).
+const DATA_BRANCH = process.env.DATA_BRANCH ?? (process.env.GITHUB_ACTIONS === "true" && !process.env.DATA_DIR ? "data" : "");
 const MAX_PER_SHARD = 500;
 const TIMEOUT_MS = 8000;
 const CONCURRENCY = 8;
@@ -230,6 +234,7 @@ async function loadSources() {
   try {
     const rows = await loadSourcesFromBackend();
     console.log(`[sources] backend: ${rows.length}`);
+    rows.fromBackend = true;
     return rows;
   } catch (e) {
     console.warn(`[sources] backend unavailable (${e?.message || e}); using ${DATA_DIR}/sources.json`);
@@ -372,7 +377,27 @@ async function writeShard(path, obj) {
 }
 
 async function main() {
+  let dataRoot = null;
+  if (DATA_BRANCH) {
+    try {
+      dataRoot = prepareDataBranch(DATA_BRANCH);
+      DATA_DIR = join(dataRoot, "data");
+      console.log(`[data-branch] writing to ${DATA_BRANCH}`);
+    } catch (e) {
+      console.warn(`[data-branch] unavailable (${e?.message || e}); writing ./data instead`);
+    }
+  }
+
   const sources = await loadSources();
+  const validSourceIds = new Set(sources.fromBackend ? sources.map((s) => s.id) : []);
+  if (sources.fromBackend) {
+    // keep the offline backup list identical to the admin's current sources
+    await writeShard(join(DATA_DIR, "sources.json"), {
+      updated_at: new Date().toISOString(),
+      sources: sources.map(({ id, name, url, feed_url, language, category, is_active, fetch_type }) => ({ id, name, url, feed_url, language, category, is_active, fetch_type })),
+    });
+  }
+  const sourceResults = [];
 
   const errors = [];
   const results = await runParallel(sources, async (src) => {
@@ -380,11 +405,13 @@ async function main() {
       const xml = await fetchWithRetry(src.feed_url?.trim() || src.url.trim());
       const items = parseFeed(xml, src);
       console.log(`[ok] ${src.name}: ${items.length}`);
+      sourceResults.push({ id: src.id, ok: true });
       return items;
     } catch (e) {
       const msg = e?.message || String(e);
       console.warn(`[err] ${src.name}: ${msg}`);
       errors.push({ source: src.name, message: msg });
+      sourceResults.push({ id: src.id, ok: false });
       return [];
     }
   }, CONCURRENCY);
@@ -404,6 +431,7 @@ async function main() {
   for (const a of unique) (byLang[a.language] || (byLang[a.language] = [])).push(a);
 
   const summary = { updated_at: new Date().toISOString(), languages: {}, errors };
+  let totalInserted = 0;
 
   for (const lang of Object.keys(byLang)) {
     const shardPath = join(DATA_DIR, lang, "latest.json");
@@ -415,6 +443,26 @@ async function main() {
       // final dedupe (in case existing had dupes)
       .filter((a, i, arr) => arr.findIndex((x) => x.fingerprint === a.fingerprint) === i)
       .slice(0, MAX_PER_SHARD);
+
+    const content = await fillContent(lang, merged);
+
+    // copy into the site's database (admin panel, sitemaps); sets a.id
+    let db = { checked: 0, inserted: 0 };
+    try {
+      db = await syncArticles({
+        url: SUPABASE_URL,
+        key: SERVICE_KEY,
+        articles: merged,
+        validSourceIds,
+        contentFor: async (a) => {
+          try { return JSON.parse(await readFile(join(DATA_DIR, lang, "content", `${a.fingerprint}.json`), "utf8")); } catch { return null; }
+        },
+      });
+      if (db.checked) console.log(`[db] ${lang}: ${db.inserted} new of ${db.checked} checked`);
+    } catch (e) {
+      console.warn(`[db] ${lang}: sync skipped (${e?.message || e})`);
+    }
+    totalInserted += db.inserted;
 
     await writeShard(shardPath, { updated_at: summary.updated_at, count: merged.length, articles: merged });
 
@@ -445,7 +493,6 @@ async function main() {
       });
     }
 
-    const content = await fillContent(lang, merged);
     summary.languages[lang] = { total: merged.length, new: fresh.length, categories: byCat.size, content };
   }
 
@@ -456,7 +503,17 @@ async function main() {
   }
   summary.markets = quotes.length;
 
+  summary.database = { inserted: totalInserted, enabled: !!(SUPABASE_URL && SERVICE_KEY) };
   await writeShard(join(DATA_DIR, "status.json"), summary);
+  if (validSourceIds.size) await recordRun({ url: SUPABASE_URL, key: SERVICE_KEY, inserted: totalInserted, sourceResults });
+  if (dataRoot) {
+    try {
+      const pushed = publishDataBranch(DATA_BRANCH, dataRoot);
+      console.log(`[data-branch] ${pushed ? "pushed" : "no changes"}`);
+    } catch (e) {
+      console.warn(`[data-branch] ${e?.message || e}`);
+    }
+  }
   console.log("[done]", JSON.stringify(summary, null, 2));
 }
 
