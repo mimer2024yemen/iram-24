@@ -27,6 +27,7 @@ env:
   VITE_EDGE_FUNCTIONS: "off"
   VITE_CDN_REPO: ${{ github.repository }}
   VITE_CDN_BRANCH: data
+  HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 != '' }}
 
 jobs:
   deploy:
@@ -75,9 +76,7 @@ jobs:
           echo "rss items: $(grep -c '<item>' dist/rss.xml)"
 
       - name: Deploy to Firebase Hosting
-        if: ${{ env.HAS_FIREBASE == 'true' }}
-        env:
-          HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 != '' }}
+        if: env.HAS_FIREBASE == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 }}
@@ -85,5 +84,5 @@ jobs:
           channelId: live
 
       - name: Missing Firebase secret
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 == '' }}
+        if: env.HAS_FIREBASE != 'true'
         run: echo "::error::Add the FIREBASE_SERVICE_ACCOUNT_IRAM24 repository secret to enable publishing." && exit 1
