@@ -3,6 +3,10 @@ name: fetch-news
 # Free, always-on news fetcher (public repo => unlimited Actions minutes).
 # One run loops for ~5.5 hours, fetching every 3 minutes, then re-starts itself.
 # The schedule below is only a safety net in case the chain ever breaks.
+#
+# News JSON is written to the separate "data" branch, never to main, so the
+# Lovable <-> GitHub code sync can not diverge. New articles are also copied
+# into the site's database when SUPABASE_SERVICE_ROLE_KEY is set.
 on:
   schedule:
     - cron: "*/15 * * * *"
@@ -23,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 50
+          fetch-depth: 1
 
       - uses: actions/setup-node@v4
         with:
@@ -35,24 +39,18 @@ jobs:
 
       - name: Fetch loop
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: https://nfcugikphoqymcqtotnv.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATA_BRANCH: data
         run: |
           git config user.name "iram24-news-bot"
           git config user.email "bot@iram24.local"
           end=$((SECONDS + 330 * 60))
           while [ $SECONDS -lt $end ]; do
-            git pull --rebase --autostash -q || git rebase --abort || true
+            # code updates only — the bot never commits to main
+            git pull --ff-only -q origin "${GITHUB_REF_NAME}" || true
+            (cd scripts/fetch-news && npm install --no-audit --no-fund --loglevel=error >/dev/null 2>&1) || true
             node scripts/fetch-news/fetch.mjs || echo "::warning::fetch run failed, retrying next cycle"
-            git add data
-            if ! git diff --staged --quiet; then
-              git commit -q -m "news: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-              for i in 1 2 3; do
-                git pull --rebase -q && git push -q && break
-                git rebase --abort 2>/dev/null || true
-                sleep 5
-              done
-            fi
             sleep 180
           done
 

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# news bot worktree of the "data" branch (GitHub Actions only)
+.data-branch/

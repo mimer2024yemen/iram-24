@@ -4,6 +4,7 @@ import {
   ArrowLeft, ArrowRight, RefreshCw, ExternalLink, Copy, Check, Share2, BookOpen, Loader2, AlertTriangle,
 } from "lucide-react";
 import LazyImage from "@/components/LazyImage";
+import { edgeUrl, EDGE_UNAVAILABLE_MESSAGE } from "@/config/backend";
 
 type Block = { type: "p" | "h" | "img" | "quote"; text?: string; src?: string; alt?: string };
 
@@ -23,12 +24,12 @@ interface ReaderData {
   error?: string;
 }
 
-const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-source`;
-const IMG_PROXY = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-proxy`;
+const ENDPOINT = edgeUrl("read-source");
+const IMG_PROXY = edgeUrl("image-proxy");
 const CACHE_PREFIX = "eram_reader_";
 const CACHE_TTL = 1000 * 60 * 30; // 30 min, revalidated in background
 
-const proxied = (src?: string) => (src ? `${IMG_PROXY}?url=${encodeURIComponent(src)}` : "");
+const proxied = (src?: string) => (src ? (IMG_PROXY ? `${IMG_PROXY}?url=${encodeURIComponent(src)}` : src) : "");
 
 function readCache(url: string): ReaderData | null {
   try {
@@ -64,6 +65,7 @@ const SourceReader = () => {
 
   const load = useCallback(async (force = false) => {
     if (!url) return;
+    if (!ENDPOINT) { setError(EDGE_UNAVAILABLE_MESSAGE); setLoading(false); return; }
     if (!force && data && !isStale(url)) return;
     if (!data) setLoading(true);
     setError(null);

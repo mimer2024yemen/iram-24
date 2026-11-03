@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { decodeHtmlEntities } from "@/lib/newsUtils";
 import Marquee from "@/components/Marquee";
 import { fetchFromCdn } from "@/lib/cdnFeed";
+import { edgeUrl } from "@/config/backend";
 
 const STORAGE_KEY_PREFIX = "eram_breaking_headlines_";
 
@@ -40,7 +41,9 @@ async function fetchCdnHeadlines(language: "AR" | "EN") {
 async function fetchBackendHeadlines(language: "AR" | "EN") {
   try {
     const params = new URLSearchParams({ lang: language, limit: "10" });
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`, {
+    const base = edgeUrl("home-feed");
+    if (!base) return [];
+    const res = await fetch(`${base}?${params.toString()}`, {
       headers: {
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,

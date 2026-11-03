@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 import {
@@ -63,7 +64,7 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
   const callAI = async (action: string) => {
     setAiLoading(action);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-article-tools", {
+      const { data, error } = await invokeEdge("ai-article-tools", {
         body: { action, articleId, title, content, language }
       });
       if (error) throw error;
@@ -84,7 +85,7 @@ const ArticleEditPage = ({ articleId, onBack }: ArticleEditPageProps) => {
     if (!sourceUrl || sourceUrl.startsWith("#")) { toast.error("لا يوجد رابط مصدر صالح"); return; }
     setFetchingContent(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-article-content", { body: { url: sourceUrl } });
+      const { data, error } = await invokeEdge("fetch-article-content", { body: { url: sourceUrl } });
       if (error) throw error;
       if (data?.content) { setContent(data.content); if (data.description) setDescription(data.description); toast.success("تم جلب المحتوى من المصدر"); }
       else toast.error("لم يتم العثور على محتوى");

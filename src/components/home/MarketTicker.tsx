@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import Marquee from "@/components/Marquee";
 import { fetchCdnMarkets } from "@/lib/cdnFeed";
 
@@ -41,7 +41,7 @@ const MarketTicker = ({ language }: Props) => {
     const load = async () => {
       // Main backend first; if it is unavailable use the free GitHub copy.
       try {
-        const { data, error } = await supabase.functions.invoke("market-prices");
+        const { data, error } = await invokeEdge("market-prices");
         if (!error && data?.quotes?.length) { save(data.quotes); return; }
       } catch {/* fall through */}
       const backup = await fetchCdnMarkets();

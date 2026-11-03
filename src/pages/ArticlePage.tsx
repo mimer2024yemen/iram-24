@@ -9,6 +9,8 @@ import LazyImage from "@/components/LazyImage";
 import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser";
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
+import { fetchCdnArticleContent } from "@/lib/cdnFeed";
+import { articleShareUrl, EDGE_FUNCTIONS_ENABLED } from "@/config/backend";
 
 interface SourceInfo {
   name: string;
@@ -139,12 +141,27 @@ const ArticlePage = () => {
       setSourceInfo(null);
       setImgError(false);
       
+      const isRss = id.startsWith("rss-");
+      // Free GitHub copy: full article text for "rss-" articles (also opens shared links directly).
+      const bodyPromise = isRss ? fetchCdnArticleContent(id) : Promise.resolve(null);
       const timer = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3500));
-      const result = await Promise.race([
+      const result = isRss ? { data: null } : await Promise.race([
         supabase.from("articles").select("*").eq("id", id).maybeSingle(),
         timer,
       ]);
-      const data = result.data || getCachedArticleById(id);
+      let data: any = result.data || getCachedArticleById(id);
+      if (isRss) {
+        const body = await bodyPromise;
+        if (body) {
+          const base = data || body.article;
+          const hero = normalizeImageUrl(base.image_url || "");
+          const extraImages = body.images.filter((src) => normalizeImageUrl(src) !== hero).slice(0, 3);
+          const fullContent = body.text.length > 0
+            ? [...extraImages.map((src) => `<img src="${src.replace(/"/g, "%22")}">`), ...body.text].join("\n")
+            : null;
+          data = { ...body.article, ...base, content: fullContent || base.content || null };
+        }
+      }
       if (data) {
         setArticle(data as any);
         setRelatedArticles(getCachedRelatedArticles(data as any, 6));
@@ -200,7 +217,7 @@ const ArticlePage = () => {
 
   const isFav = favs.includes(article.id);
   // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
-  const shareUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+  const shareUrl = articleShareUrl(article.id);
   const title = decodeHtmlEntities(article.title);
   const shareText = `${title} - إيرام 24`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
@@ -435,12 +452,23 @@ const ArticlePage = () => {
         {/* Source */}
         {hasValidSource && (
           <div className="mt-6 flex flex-wrap gap-2">
-            <button
-              onClick={() => navigate(`/reader?url=${encodeURIComponent(displaySourceUrl!)}&lang=${isRTL ? "AR" : "EN"}`)}
-              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
-              <ExternalLink size={13} />
-              {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
-            </button>
+            {EDGE_FUNCTIONS_ENABLED ? (
+              <button
+                onClick={() => navigate(`/reader?url=${encodeURIComponent(displaySourceUrl!)}&lang=${isRTL ? "AR" : "EN"}`)}
+                className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
+                <ExternalLink size={13} />
+                {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
+              </button>
+            ) : (
+              <a
+                href={displaySourceUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
+                <ExternalLink size={13} />
+                {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
+              </a>
+            )}
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getBlockedWords, removeBlockedWords } from "@/lib/blockedWords";
 import { fetchFromCdn } from "@/lib/cdnFeed";
+import { edgeUrl } from "@/config/backend";
 
 export interface Article {
   id: string;
@@ -104,7 +105,9 @@ async function fetchEdgeDirect(language: string, category: string | undefined, l
   try {
     const params = new URLSearchParams({ lang: language, limit: String(limit) });
     if (category && category !== "الرئيسية" && category !== "Home") params.set("category", category);
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`;
+    const base = edgeUrl("home-feed");
+    if (!base) return null;
+    const url = `${base}?${params.toString()}`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 7000);
     const res = await fetch(url, {

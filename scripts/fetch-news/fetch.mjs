@@ -8,10 +8,37 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { syncArticles, recordRun } from "./supabaseSync.mjs";
+import { prepareDataBranch, publishDataBranch } from "./dataBranch.mjs";
+
+// Optional deps for full-article extraction. A long-running Action loop may pull
+// this file before its deps are installed, so install on demand and never let a
+// missing package stop news fetching.
+let Readability = null;
+let parseHTML = null;
+async function loadExtractors() {
+  try {
+    ({ Readability } = await import("@mozilla/readability"));
+    ({ parseHTML } = await import("linkedom"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+if (!(await loadExtractors())) {
+  try {
+    execSync("npm install --no-audit --no-fund --loglevel=error", { cwd: dirname(fileURLToPath(import.meta.url)), stdio: "ignore", timeout: 120000 });
+  } catch { /* ignore */ }
+  if (!(await loadExtractors())) console.warn("[content] extractor packages unavailable; skipping full text this run");
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const DATA_DIR = process.env.DATA_DIR || "data";
+let DATA_DIR = process.env.DATA_DIR || "data";
+// In GitHub Actions the JSON goes to the separate "data" branch (never main).
+const DATA_BRANCH = process.env.DATA_BRANCH ?? (process.env.GITHUB_ACTIONS === "true" && !process.env.DATA_DIR ? "data" : "");
 const MAX_PER_SHARD = 500;
 const TIMEOUT_MS = 8000;
 const CONCURRENCY = 8;
@@ -207,6 +234,7 @@ async function loadSources() {
   try {
     const rows = await loadSourcesFromBackend();
     console.log(`[sources] backend: ${rows.length}`);
+    rows.fromBackend = true;
     return rows;
   } catch (e) {
     console.warn(`[sources] backend unavailable (${e?.message || e}); using ${DATA_DIR}/sources.json`);
@@ -215,6 +243,70 @@ async function loadSources() {
     if (rows.length === 0) throw new Error("backup sources.json is empty");
     return rows;
   }
+}
+
+// ---------------- full article text ----------------
+// Each article's full body is stored as structural arrays (text[], images[])
+// in data/<LANG>/content/<fingerprint>.json, so the homepage JSON stays small.
+const CONTENT_PER_RUN = Number(process.env.CONTENT_PER_RUN || 45);
+const SKIP_HOSTS = /(^|\.)(x\.com|twitter\.com|t\.co|youtube\.com|youtu\.be|facebook\.com|instagram\.com|t\.me)$/i;
+const NOISE_ANY = /(من الضروري السماح بجمع|ملفات تعريف الارتباط|cookies? (policy|settings)|تخطَّ|تخط مقاطع|انتهى المحتوى|نهاية المحتوى|All rights reserved|جميع الحقوق محفوظة|©)/i;
+const NOISE = /^(نشرت في|نُشر:|نشر:|تاريخ النشر|آخر تحديث|التعليق على الصورة|الصورة،|مصدر الصورة|Image source|Image caption|اقرأ أيضا|اقرأ أيضاً|إقرأ أيضاً|اقرأ المزيد|المزيد:|شاهد أيضا|تابعونا|اشترك|Read more|Read also|Sign up|Subscribe|Advertisement|إعلان)/i;
+
+function absoluteUrl(src, base) {
+  try { return new URL(src, base).href; } catch { return null; }
+}
+
+export async function extractArticle(url) {
+  let host = "";
+  try { host = new URL(url).hostname; } catch { return null; }
+  if (SKIP_HOSTS.test(host) || !Readability || !parseHTML) return null;
+  const html = await fetchWithRetry(url, 2);
+  const { document } = parseHTML(html);
+  const parsed = new Readability(document, { charThreshold: 250 }).parse();
+  if (!parsed?.content) return null;
+  const { document: doc } = parseHTML(`<!doctype html><html><body>${parsed.content}</body></html>`);
+  const text = [];
+  const seen = new Set();
+  for (const el of doc.querySelectorAll("p, h2, h3, h4, li, blockquote")) {
+    if (el.closest && el.parentElement && el.parentElement.closest("p, li, blockquote")) continue;
+    const t = (el.textContent || "").replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, "").replace(/\s+/g, " ").trim();
+    if (t.length < 20 || NOISE.test(t) || NOISE_ANY.test(t) || seen.has(t)) continue;
+    if (parsed.title && t === parsed.title.trim()) continue;
+    seen.add(t);
+    text.push(t);
+  }
+  const images = [];
+  for (const img of doc.querySelectorAll("img")) {
+    const raw = img.getAttribute("data-src") || img.getAttribute("src") || "";
+    const abs = absoluteUrl(raw, url);
+    if (abs && /^https?:/.test(abs) && !/\.(svg|gif)(\?|$)/i.test(abs) && !images.includes(abs)) images.push(abs);
+  }
+  if (text.join(" ").length < 200) return null;
+  return { text: text.slice(0, 150), images: images.slice(0, 12) };
+}
+
+async function fillContent(lang, articles) {
+  if (!Readability || !parseHTML) return { attempted: 0, full: 0 };
+  const dir = join(DATA_DIR, lang, "content");
+  const todo = articles.filter((a) => a.fingerprint && a.url && !existsSync(join(dir, `${a.fingerprint}.json`))).slice(0, CONTENT_PER_RUN);
+  let ok = 0;
+  await runParallel(todo, async (a) => {
+    let body = null;
+    try { body = await extractArticle(a.url); } catch { body = null; }
+    if (body) ok++;
+    // Always write a file (even without body) so the article page can open
+    // shared links directly and failed pages are not retried every cycle.
+    await writeShard(join(dir, `${a.fingerprint}.json`), {
+      title: a.title, description: a.description, url: a.url, image_url: a.image_url,
+      published_at: a.published_at, source_name: a.source_name, language: a.language,
+      category: a.category, fingerprint: a.fingerprint,
+      text: body?.text || [], images: body?.images || [], full: !!body,
+      fetched_at: new Date().toISOString(),
+    });
+  }, 6);
+  console.log(`[content] ${lang}: ${ok}/${todo.length} full articles`);
+  return { attempted: todo.length, full: ok };
 }
 
 // ---------------- markets ----------------
@@ -285,7 +377,27 @@ async function writeShard(path, obj) {
 }
 
 async function main() {
+  let dataRoot = null;
+  if (DATA_BRANCH) {
+    try {
+      dataRoot = prepareDataBranch(DATA_BRANCH);
+      DATA_DIR = join(dataRoot, "data");
+      console.log(`[data-branch] writing to ${DATA_BRANCH}`);
+    } catch (e) {
+      console.warn(`[data-branch] unavailable (${e?.message || e}); writing ./data instead`);
+    }
+  }
+
   const sources = await loadSources();
+  const validSourceIds = new Set(sources.fromBackend ? sources.map((s) => s.id) : []);
+  if (sources.fromBackend) {
+    // keep the offline backup list identical to the admin's current sources
+    await writeShard(join(DATA_DIR, "sources.json"), {
+      updated_at: new Date().toISOString(),
+      sources: sources.map(({ id, name, url, feed_url, language, category, is_active, fetch_type }) => ({ id, name, url, feed_url, language, category, is_active, fetch_type })),
+    });
+  }
+  const sourceResults = [];
 
   const errors = [];
   const results = await runParallel(sources, async (src) => {
@@ -293,11 +405,13 @@ async function main() {
       const xml = await fetchWithRetry(src.feed_url?.trim() || src.url.trim());
       const items = parseFeed(xml, src);
       console.log(`[ok] ${src.name}: ${items.length}`);
+      sourceResults.push({ id: src.id, ok: true });
       return items;
     } catch (e) {
       const msg = e?.message || String(e);
       console.warn(`[err] ${src.name}: ${msg}`);
       errors.push({ source: src.name, message: msg });
+      sourceResults.push({ id: src.id, ok: false });
       return [];
     }
   }, CONCURRENCY);
@@ -317,6 +431,7 @@ async function main() {
   for (const a of unique) (byLang[a.language] || (byLang[a.language] = [])).push(a);
 
   const summary = { updated_at: new Date().toISOString(), languages: {}, errors };
+  let totalInserted = 0;
 
   for (const lang of Object.keys(byLang)) {
     const shardPath = join(DATA_DIR, lang, "latest.json");
@@ -328,6 +443,26 @@ async function main() {
       // final dedupe (in case existing had dupes)
       .filter((a, i, arr) => arr.findIndex((x) => x.fingerprint === a.fingerprint) === i)
       .slice(0, MAX_PER_SHARD);
+
+    const content = await fillContent(lang, merged);
+
+    // copy into the site's database (admin panel, sitemaps); sets a.id
+    let db = { checked: 0, inserted: 0 };
+    try {
+      db = await syncArticles({
+        url: SUPABASE_URL,
+        key: SERVICE_KEY,
+        articles: merged,
+        validSourceIds,
+        contentFor: async (a) => {
+          try { return JSON.parse(await readFile(join(DATA_DIR, lang, "content", `${a.fingerprint}.json`), "utf8")); } catch { return null; }
+        },
+      });
+      if (db.checked) console.log(`[db] ${lang}: ${db.inserted} new of ${db.checked} checked`);
+    } catch (e) {
+      console.warn(`[db] ${lang}: sync skipped (${e?.message || e})`);
+    }
+    totalInserted += db.inserted;
 
     await writeShard(shardPath, { updated_at: summary.updated_at, count: merged.length, articles: merged });
 
@@ -358,7 +493,7 @@ async function main() {
       });
     }
 
-    summary.languages[lang] = { total: merged.length, new: fresh.length, categories: byCat.size };
+    summary.languages[lang] = { total: merged.length, new: fresh.length, categories: byCat.size, content };
   }
 
   // Market prices (only overwrite when we actually got quotes, so the bar never empties)
@@ -368,11 +503,23 @@ async function main() {
   }
   summary.markets = quotes.length;
 
+  summary.database = { inserted: totalInserted, enabled: !!(SUPABASE_URL && SERVICE_KEY) };
   await writeShard(join(DATA_DIR, "status.json"), summary);
+  if (validSourceIds.size) await recordRun({ url: SUPABASE_URL, key: SERVICE_KEY, inserted: totalInserted, sourceResults });
+  if (dataRoot) {
+    try {
+      const pushed = publishDataBranch(DATA_BRANCH, dataRoot);
+      console.log(`[data-branch] ${pushed ? "pushed" : "no changes"}`);
+    } catch (e) {
+      console.warn(`[data-branch] ${e?.message || e}`);
+    }
+  }
   console.log("[done]", JSON.stringify(summary, null, 2));
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (!process.env.FETCH_NEWS_NO_MAIN) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
