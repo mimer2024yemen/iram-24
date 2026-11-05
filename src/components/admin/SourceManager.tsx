@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { Plus, Trash2, Edit, ToggleLeft, ToggleRight, RefreshCw, Download, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -155,7 +156,7 @@ const SourceManager = () => {
   const handleFetchSource = async (sourceId: string) => {
     setFetchingSource(sourceId);
     try {
-      const res = await supabase.functions.invoke("fetch-news", { body: { source_id: sourceId } });
+      const res = await invokeEdge("fetch-news", { body: { source_id: sourceId } });
       if (res.error || res.data?.error || res.data?.logs?.some((log: string) => /ERROR|No articles found/.test(log))) toast.error(res.data?.logs?.join(" • ") || "فشل الجلب");
       else if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد`);
       else toast.error("فشل الجلب");
@@ -167,7 +168,7 @@ const SourceManager = () => {
   const handleFetchAll = async () => {
     setFetchingAll(true);
     try {
-      const res = await supabase.functions.invoke("fetch-news");
+      const res = await invokeEdge("fetch-news");
       if (res.error || res.data?.error || res.data?.logs?.some((log: string) => /ERROR|No articles found/.test(log))) toast.error(res.data?.logs?.join(" • ") || "فشل الجلب");
       else if (res.data) toast.success(`تم جلب ${res.data.count || 0} خبر جديد من جميع المصادر`);
       else toast.error("فشل الجلب");

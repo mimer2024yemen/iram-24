@@ -10,6 +10,7 @@ import { normalizeImageUrl, parseContentToStructured } from "@/lib/contentParser
 import { proxyImageUrl } from "@/lib/imageProxy";
 import { toast } from "sonner";
 import { fetchCdnArticleContent } from "@/lib/cdnFeed";
+import { articleShareUrl, EDGE_FUNCTIONS_ENABLED } from "@/config/backend";
 
 interface SourceInfo {
   name: string;
@@ -216,7 +217,7 @@ const ArticlePage = () => {
 
   const isFav = favs.includes(article.id);
   // Crawler-friendly share URL — social bots get per-article OG previews; humans redirect.
-  const shareUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+  const shareUrl = articleShareUrl(article.id);
   const title = decodeHtmlEntities(article.title);
   const shareText = `${title} - إيرام 24`;
   const handleFav = () => { setFavs(toggleFavorite(article.id)); toast.success(isFav ? (isRTL ? "أزيل من المفضلة" : "Removed") : (isRTL ? "أُضيف للمفضلة" : "Saved")); };
@@ -451,12 +452,23 @@ const ArticlePage = () => {
         {/* Source */}
         {hasValidSource && (
           <div className="mt-6 flex flex-wrap gap-2">
-            <button
-              onClick={() => navigate(`/reader?url=${encodeURIComponent(displaySourceUrl!)}&lang=${isRTL ? "AR" : "EN"}`)}
-              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
-              <ExternalLink size={13} />
-              {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
-            </button>
+            {EDGE_FUNCTIONS_ENABLED ? (
+              <button
+                onClick={() => navigate(`/reader?url=${encodeURIComponent(displaySourceUrl!)}&lang=${isRTL ? "AR" : "EN"}`)}
+                className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
+                <ExternalLink size={13} />
+                {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
+              </button>
+            ) : (
+              <a
+                href={displaySourceUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all">
+                <ExternalLink size={13} />
+                {displaySourceName || (isRTL ? "المصدر الرسمي" : "Official Source")}
+              </a>
+            )}
           </div>
         )}
 

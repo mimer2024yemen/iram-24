@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { Search, Loader2, CheckCircle, XCircle, Image, FileText, Clock, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,7 +30,7 @@ const SourceAnalyzer = () => {
     setResults([]);
     setBestIndex(null);
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-source", {
+      const { data, error } = await invokeEdge("analyze-source", {
         body: { url: url.trim() },
       });
       if (error) throw error;

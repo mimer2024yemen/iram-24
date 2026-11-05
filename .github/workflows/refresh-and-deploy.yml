@@ -1,0 +1,88 @@
+name: refresh-and-deploy
+
+# Every 2 hours (and after code changes): rebuild the site, regenerate
+# sitemap.xml / sitemap-news.xml / rss.xml / share previews from real
+# articles, and publish to Firebase Hosting (free Spark plan, no billing).
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  push:
+    branches: [main]
+    paths-ignore: ["data/**", "**/*.md"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: refresh-and-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  VITE_SUPABASE_URL: https://nfcugikphoqymcqtotnv.supabase.co
+  VITE_SUPABASE_PROJECT_ID: nfcugikphoqymcqtotnv
+  # Public (publishable) key — safe in the browser; a secret overrides it.
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_4TCPQIfhbywOq-bvYmeysw_y8_-2aCH' }}
+  # This database has no server functions; the site uses the GitHub news data instead.
+  VITE_EDGE_FUNCTIONS: "off"
+  VITE_CDN_REPO: ${{ github.repository }}
+  VITE_CDN_BRANCH: data
+  HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 != '' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: News data (data branch)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: data
+          path: .data-branch
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Official logo (hosting-local copy)
+        run: |
+          curl -sfL "https://iram-24.lovable.app/__l5e/assets-v1/a414fc89-272d-4f6f-9c9c-e1888e91deda/iram24-official.jpg" -o dist/iram24-official.jpg \
+            || curl -sfL "https://iram24.web.app/iram24-official.jpg" -o dist/iram24-official.jpg \
+            || echo "::warning::official logo not downloaded"
+
+      - name: Sitemaps, RSS and share previews
+        env:
+          DATA_LOCAL: .data-branch/data
+          CDN_REPO: ${{ github.repository }}
+        run: node scripts/generate-seo.mjs dist
+
+      - name: Check output
+        run: |
+          test -s dist/index.html
+          test -s dist/sitemap.xml
+          test -s dist/rss.xml
+          test -s dist/googlecc713820b45a6d24.html
+          echo "articles in sitemap: $(grep -c '/article/' dist/sitemap.xml)"
+          echo "rss items: $(grep -c '<item>' dist/rss.xml)"
+
+      - name: Deploy to Firebase Hosting
+        if: env.HAS_FIREBASE == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 }}
+          projectId: iram24
+          channelId: live
+
+      - name: Missing Firebase secret
+        if: env.HAS_FIREBASE != 'true'
+        run: echo "::error::Add the FIREBASE_SERVICE_ACCOUNT_IRAM24 repository secret to enable publishing." && exit 1

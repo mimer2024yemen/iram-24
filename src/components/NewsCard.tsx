@@ -5,6 +5,7 @@ import { classify, normalizeCategory } from "@/lib/classifier";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { proxyImageUrl } from "@/lib/imageProxy";
+import { articleShareUrl } from "@/config/backend";
 import { normalizeImageUrl } from "@/lib/contentParser";
 import LazyImage from "@/components/LazyImage";
 import { categoryStyle } from "@/lib/categoryColors";
@@ -64,7 +65,7 @@ const NewsCard = ({ article, language, variant = "medium", onBeforeNavigate }: N
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/article-share?id=${encodeURIComponent(article.id)}`;
+    const url = articleShareUrl(article.id);
     const text = `${decodeHtmlEntities(article.title)} - إيرام 24`;
     if (navigator.share) {
       try { await navigator.share({ title: decodeHtmlEntities(article.title), text, url }); } catch {}

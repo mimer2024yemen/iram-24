@@ -1,0 +1,64 @@
+name: lovable-sync-merge
+
+# When Lovable and GitHub diverge, Lovable pushes its work to a
+# "lovable-sync*" branch. This merges it back into main automatically:
+# code comes from Lovable, data/ keeps main's copy. The merge commit has the
+# Lovable commit as a parent, so Lovable sees main as up to date again.
+on:
+  push:
+    branches: ["lovable-sync*"]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "lovable-sync branch to merge"
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: lovable-sync-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Merge Lovable work into main
+        env:
+          SRC: ${{ github.event.inputs.branch || github.ref_name }}
+        run: |
+          set -e
+          git config user.name "iram24-sync-bot"
+          git config user.email "bot@iram24.local"
+          git fetch -q origin "$SRC" main
+          if git merge-base --is-ancestor "origin/$SRC" origin/main; then
+            echo "Already merged."; exit 0
+          fi
+          git checkout -q -B main origin/main
+          git merge -q --no-ff --no-commit -s ours "origin/$SRC" || true
+          git rm -rq --cached . >/dev/null
+          git read-tree "origin/$SRC"
+          if git cat-file -e origin/main:data 2>/dev/null; then
+            git rm -rq --cached data >/dev/null 2>&1 || true
+            git read-tree --prefix=data/ origin/main:data
+          fi
+          git checkout-index -afq
+          git clean -fdq
+          git commit -qm "Merge Lovable work from $SRC (code from Lovable, data from main)"
+          git push -q origin main
+          echo "Merged $SRC into main."
+
+      - name: Make sure the news robot is running
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow enable fetch-news.yml || true
+          running=$(gh run list --workflow fetch-news.yml --status in_progress --json databaseId --jq 'length' || echo 0)
+          if [ "$running" = "0" ]; then gh workflow run fetch-news.yml --ref main || true; fi

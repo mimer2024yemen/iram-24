@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -68,7 +69,7 @@ const SourceDebugger = () => {
     setLoading((p) => ({ ...p, [source.id]: true }));
     try {
       const testUrl = source.feed_url || source.url;
-      const { data, error } = await supabase.functions.invoke("debug-source", {
+      const { data, error } = await invokeEdge("debug-source", {
         body: { url: testUrl, fetch_type: source.fetch_type },
       });
       if (error) throw error;
@@ -105,7 +106,7 @@ const SourceDebugger = () => {
     setFixing((p) => ({ ...p, [source.id]: true }));
     try {
       const baseUrl = source.feed_url || source.url;
-      const { data, error } = await supabase.functions.invoke("debug-source", {
+      const { data, error } = await invokeEdge("debug-source", {
         body: { url: baseUrl, action: "find_rss" },
       });
       if (error) throw error;
@@ -166,7 +167,7 @@ const SourceDebugger = () => {
     for (const source of failedRss) {
       try {
         const baseUrl = source.feed_url || source.url;
-        const { data } = await supabase.functions.invoke("debug-source", {
+        const { data } = await invokeEdge("debug-source", {
           body: { url: baseUrl, action: "find_rss" },
         });
         const candidates: RssCandidate[] = data?.candidates || [];

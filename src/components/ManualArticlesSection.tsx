@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/hooks/useArticles";
 import { timeAgo } from "@/lib/newsUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { edgeUrl } from "@/config/backend";
 
 interface ManualArticlesSectionProps {
   language: "AR" | "EN";
@@ -14,8 +16,20 @@ const ManualArticlesSection = ({ language }: ManualArticlesSectionProps) => {
   useEffect(() => {
     const fetchManual = async () => {
       try {
+        const base = edgeUrl("home-feed");
+        if (!base) {
+          const { data } = await supabase
+            .from("articles")
+            .select("id,title,description,content,url,image_url,category,language,published_at,views,source_id,created_at,author_name,author_image_url,is_manual")
+            .eq("language", language)
+            .eq("is_manual", true)
+            .order("published_at", { ascending: false })
+            .limit(5);
+          setArticles((data as Article[]) || []);
+          return;
+        }
         const params = new URLSearchParams({ lang: language, limit: "20" });
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-feed?${params.toString()}`, {
+        const res = await fetch(`${base}?${params.toString()}`, {
           headers: {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,

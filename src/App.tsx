@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,12 @@ import RadioPage from "./pages/RadioPage";
 import RadioAdmin from "./pages/RadioAdmin";
 import SourceReader from "./pages/SourceReader";
 import NotFound from "./pages/NotFound";
+
+/** Share links (/share/:id) open the article; crawlers get the static preview page. */
+const ShareRedirect = () => {
+  const { id = "" } = useParams();
+  return <Navigate to={`/article/${encodeURIComponent(id)}`} replace />;
+};
 import { RadioProvider, useRadio } from "./contexts/RadioContext";
 import RadioSheet from "./components/radio/RadioSheet";
 import MiniPlayer from "./components/radio/MiniPlayer";
@@ -55,6 +61,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<NewsFeed />} />
             <Route path="/article/:id" element={<ArticlePage />} />
+            <Route path="/share/:id" element={<ShareRedirect />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/reader" element={<SourceReader />} />
 

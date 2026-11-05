@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/config/backend";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,7 +13,7 @@ const AdminAI = () => {
     setLoading(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-news-helper", {
+      const { data, error } = await invokeEdge("ai-news-helper", {
         body: { text: newsText.trim() },
       });
       if (error) throw error;
