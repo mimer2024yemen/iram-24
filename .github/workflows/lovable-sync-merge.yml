@@ -43,10 +43,9 @@ jobs:
           fi
           git checkout -q -B main origin/main
           git merge -q --no-ff --no-commit -s ours "origin/$SRC" || true
-          git rm -rq --cached . >/dev/null
           git read-tree "origin/$SRC"
           if git cat-file -e origin/main:data 2>/dev/null; then
-            git rm -rq --cached data >/dev/null 2>&1 || true
+            git rm -rqf --cached --ignore-unmatch data
             git read-tree --prefix=data/ origin/main:data
           fi
           git checkout-index -afq
