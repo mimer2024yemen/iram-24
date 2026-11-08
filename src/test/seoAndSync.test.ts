@@ -30,6 +30,11 @@ describe("database sync", () => {
   it("uses the same duplicate key as the backend fetcher", () => {
     expect(sync.articleHash("A b", "http://Ex.com/x/?utm_source=z")).toBe(sync.articleHash("a  b", "https://ex.com/x"));
   });
+  it("treats a re-published link with an edited headline as the same story", () => {
+    expect(sync.storyKey("https://www.bbc.co.uk/news/articles/ck79?at_medium=RSS&amp%3Bat_campaign=rss"))
+      .toBe(sync.storyKey("https://www.bbc.co.uk/news/articles/ck79"));
+    expect(sync.storyKey("https://x.com/a?id=5&at_medium=RSS")).toBe("https://x.com/a?id=5");
+  });
   it("derives a stable UUID-shaped id from the fingerprint", () => {
     const id = sync.idFromFingerprint("0123456789abcdef");
     expect(id).toBe(sync.idFromFingerprint("0123456789abcdef"));

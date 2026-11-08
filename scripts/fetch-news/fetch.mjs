@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { syncArticles, recordRun } from "./supabaseSync.mjs";
+import { syncArticles, recordRun, storyKey } from "./supabaseSync.mjs";
 import { prepareDataBranch, publishDataBranch } from "./dataBranch.mjs";
 
 // Optional deps for full-article extraction. A long-running Action loop may pull
@@ -442,6 +442,13 @@ async function main() {
       .sort((a, b) => (b.published_at || "").localeCompare(a.published_at || ""))
       // final dedupe (in case existing had dupes)
       .filter((a, i, arr) => arr.findIndex((x) => x.fingerprint === a.fingerprint) === i)
+      // one entry per story: sources often re-publish the same link with an edited headline
+      .filter(((seenStories) => (a) => {
+        const k = storyKey(a.url);
+        if (!k || seenStories.has(k)) return !k;
+        seenStories.add(k);
+        return true;
+      })(new Set()))
       .slice(0, MAX_PER_SHARD);
 
     const content = await fillContent(lang, merged);
