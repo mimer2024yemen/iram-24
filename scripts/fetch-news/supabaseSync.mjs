@@ -51,6 +51,14 @@ export function normalizeTitleKey(title) {
     .trim();
 }
 
+/** One key per story: same link even if the source later edits the headline. */
+export function storyKey(url) {
+  return normalizeUrlKey(String(url || "").replace(/&amp(;|%3B)/gi, "&"))
+    .replace(/([?&])(at_medium|at_campaign|at_link_origin|at_ptr_name)=[^&]*/g, "$1")
+    .replace(/[?&]+$/, "")
+    .replace(/\?&+/, "?");
+}
+
 /** Database duplicate key: identical to the hash the backend fetcher writes. */
 export function articleHash(title, url) {
   return hashString(`${normalizeTitleKey(title)}|${normalizeUrlKey(url)}`);
@@ -107,10 +115,12 @@ export async function syncArticles({ url: base, key, articles, validSourceIds, c
   const byUrl = await existingIds(base, key, "url", [...new Set(todo.filter((a) => !byHash.has(a._hash)).map((a) => a.url))]);
 
   const rows = [];
+  const batchIds = new Map(); // storyKey -> id, so one story is inserted once
   for (const a of todo) {
-    const found = byHash.get(a._hash) || byUrl.get(a.url);
+    const found = byHash.get(a._hash) || byUrl.get(a.url) || batchIds.get(storyKey(a.url));
     if (found) { a.id = found; continue; }
     a.id = idFromFingerprint(a.fingerprint);
+    batchIds.set(storyKey(a.url), a.id);
     const body = contentFor ? await contentFor(a) : null;
     rows.push({
       id: a.id,
