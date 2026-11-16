@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { syncArticles, recordRun, storyKey } from "./supabaseSync.mjs";
+import { syncFirestore } from "./firestoreSync.mjs";
 import { prepareDataBranch, publishDataBranch } from "./dataBranch.mjs";
 
 // Optional deps for full-article extraction. A long-running Action loop may pull
@@ -470,6 +471,17 @@ async function main() {
       console.warn(`[db] ${lang}: sync skipped (${e?.message || e})`);
     }
     totalInserted += db.inserted;
+
+    // new articles only -> Firebase Firestore
+    summary.firestore = summary.firestore || {};
+    try {
+      const fsr = await syncFirestore(lang, fresh);
+      summary.firestore[lang] = fsr;
+      if (fsr.enabled) console.log(`[firestore] ${lang}: ${fsr.written} stored`);
+    } catch (e) {
+      summary.firestore[lang] = { enabled: false, error: String(e?.message || e).slice(0, 160) };
+      console.warn(`[firestore] ${lang}: skipped (${String(e?.message || e).slice(0, 160)})`);
+    }
 
     await writeShard(shardPath, { updated_at: summary.updated_at, count: merged.length, articles: merged });
 

@@ -1,15 +1,14 @@
 name: fetch-news
 
 # Free, always-on news fetcher (public repo => unlimited Actions minutes).
-# One run loops for ~5.5 hours, fetching every 3 minutes, then re-starts itself.
-# The schedule below is only a safety net in case the chain ever breaks.
+# Runs once every 60 minutes, plus a manual Run workflow button. Never commits to main.
 #
 # News JSON is written to the separate "data" branch, never to main, so the
 # Lovable <-> GitHub code sync can not diverge. New articles are also copied
 # into the site's database when SUPABASE_SERVICE_ROLE_KEY is set.
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch: {}
 
 concurrency:
@@ -18,12 +17,11 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,25 +35,13 @@ jobs:
         working-directory: scripts/fetch-news
         run: npm install --no-audit --no-fund --loglevel=error
 
-      - name: Fetch loop
+      - name: Fetch news once
         env:
           SUPABASE_URL: https://nfcugikphoqymcqtotnv.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IRAM24 }}
           DATA_BRANCH: data
         run: |
           git config user.name "iram24-news-bot"
           git config user.email "bot@iram24.local"
-          end=$((SECONDS + 330 * 60))
-          while [ $SECONDS -lt $end ]; do
-            # code updates only — the bot never commits to main
-            git pull --ff-only -q origin "${GITHUB_REF_NAME}" || true
-            (cd scripts/fetch-news && npm install --no-audit --no-fund --loglevel=error >/dev/null 2>&1) || true
-            node scripts/fetch-news/fetch.mjs || echo "::warning::fetch run failed, retrying next cycle"
-            sleep 180
-          done
-
-      - name: Restart the loop
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run fetch-news.yml --ref "${{ github.ref_name }}" || echo "restart request failed; schedule will resume"
+          node scripts/fetch-news/fetch.mjs
