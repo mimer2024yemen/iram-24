@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 process.env.SEO_NO_MAIN = "1";
-// @ts-expect-error plain JS module
 const seo = await import("../../scripts/generate-seo.mjs");
-// @ts-expect-error plain JS module
 const sync = await import("../../scripts/fetch-news/supabaseSync.mjs");
 
 const now = new Date("2026-11-03T12:00:00Z");
