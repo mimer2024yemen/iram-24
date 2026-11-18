@@ -17,28 +17,27 @@ async function getDb() {
   return dbPromise;
 }
 
-export async function syncFirestore(lang, fresh) {
-  const db = await getDb();
+export async function syncFirestore(lang, fresh, database) {
+  const db = database || await getDb();
   if (!db) return { enabled: false, written: 0 };
   let written = 0;
-  // stay far below the free 20k writes/day: at most 400 docs per run & language
-  const batchItems = fresh.slice(0, 400);
+  // Chunk transactions, not article count: retain every incoming story.
+  const batchItems = fresh.filter(a => a?.fingerprint);
   for (let i = 0; i < batchItems.length; i += 400) {
     const batch = db.batch();
     for (const a of batchItems.slice(i, i + 400)) {
       if (!a?.fingerprint) continue;
       const ref = db.collection("articles").doc(String(a.fingerprint));
       batch.create(ref, { ...JSON.parse(JSON.stringify(a)), lang, stored_at: new Date().toISOString() });
-      written++;
     }
     try {
       await batch.commit();
+      written += batchItems.slice(i, i + 400).length;
     } catch (e) {
       // ALREADY_EXISTS => commit per doc so existing ones are never overwritten
       if (e?.code === 6) {
-        written = 0;
-        for (const a of batchItems) {
-          try { await db.collection("articles").doc(String(a.fingerprint)).create({ ...JSON.parse(JSON.stringify(a)), lang, stored_at: new Date().toISOString() }); written++; } catch { /* exists */ }
+        for (const a of batchItems.slice(i, i + 400)) {
+          try { await db.collection("articles").doc(String(a.fingerprint)).create({ ...JSON.parse(JSON.stringify(a)), lang, stored_at: new Date().toISOString() }); written++; } catch (error) { if (error?.code !== 6) throw error; }
         }
       } else throw e;
     }

@@ -1,6 +1,7 @@
 /**
  * Normalize image URLs - fix Twitter/X images, decode entities
  */
+import { cleanParagraphs } from "../../scripts/fetch-news/contentCleaning.mjs";
 export function normalizeImageUrl(url: string): string {
   if (!url) return url;
   url = url.trim().replace(/&amp;/g, "&");
@@ -98,7 +99,7 @@ export function parseContentToStructured(raw: string | null): {
     .replace(/[ \t]+/g, " ")
     .trim();
 
-  const text = content.split("\n").filter(line => line.trim().length > 0);
+  const text = cleanParagraphs(content.split("\n"));
 
   return { text, images, videos };
 }

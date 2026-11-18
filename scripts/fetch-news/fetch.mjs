@@ -12,6 +12,7 @@ import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { syncArticles, recordRun, storyKey } from "./supabaseSync.mjs";
 import { syncFirestore } from "./firestoreSync.mjs";
+import { cleanText, cleanParagraphs, removeFurniture } from "./contentCleaning.mjs";
 import { prepareDataBranch, publishDataBranch } from "./dataBranch.mjs";
 
 // Optional deps for full-article extraction. A long-running Action loop may pull
@@ -118,7 +119,7 @@ function textOf(v) {
 }
 
 function stripHtml(s) {
-  return String(s || "")
+  return cleanText(String(s || "")
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<[^>]+>/g, " ")
@@ -128,7 +129,7 @@ function stripHtml(s) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
-    .trim();
+    .trim());
 }
 
 function extractImage(item, description) {
@@ -249,7 +250,7 @@ async function loadSources() {
 // ---------------- full article text ----------------
 // Each article's full body is stored as structural arrays (text[], images[])
 // in data/<LANG>/content/<fingerprint>.json, so the homepage JSON stays small.
-const CONTENT_PER_RUN = Number(process.env.CONTENT_PER_RUN || 45);
+const CONTENT_PER_RUN = Number(process.env.CONTENT_PER_RUN || Infinity);
 const SKIP_HOSTS = /(^|\.)(x\.com|twitter\.com|t\.co|youtube\.com|youtu\.be|facebook\.com|instagram\.com|t\.me)$/i;
 const NOISE_ANY = /(من الضروري السماح بجمع|ملفات تعريف الارتباط|cookies? (policy|settings)|تخطَّ|تخط مقاطع|انتهى المحتوى|نهاية المحتوى|All rights reserved|جميع الحقوق محفوظة|©)/i;
 const NOISE = /^(نشرت في|نُشر:|نشر:|تاريخ النشر|آخر تحديث|التعليق على الصورة|الصورة،|مصدر الصورة|Image source|Image caption|اقرأ أيضا|اقرأ أيضاً|إقرأ أيضاً|اقرأ المزيد|المزيد:|شاهد أيضا|تابعونا|اشترك|Read more|Read also|Sign up|Subscribe|Advertisement|إعلان)/i;
@@ -264,9 +265,17 @@ export async function extractArticle(url) {
   if (SKIP_HOSTS.test(host) || !Readability || !parseHTML) return null;
   const html = await fetchWithRetry(url, 2);
   const { document } = parseHTML(html);
+  removeFurniture(document);
+  // Prefer explicit publisher body containers, keeping the standfirst.
+  const bodyContainer = document.querySelector('[itemprop="articleBody"], .main-article__editor-content, .article__body, .article-body, .article-content');
+  if (bodyContainer && (bodyContainer.textContent || "").length > 200) {
+    const summary = document.querySelector('.main-article__summary');
+    document.body.innerHTML = `${summary?.outerHTML || ""}${bodyContainer.outerHTML}`;
+  }
   const parsed = new Readability(document, { charThreshold: 250 }).parse();
   if (!parsed?.content) return null;
   const { document: doc } = parseHTML(`<!doctype html><html><body>${parsed.content}</body></html>`);
+  removeFurniture(doc);
   const text = [];
   const seen = new Set();
   for (const el of doc.querySelectorAll("p, h2, h3, h4, li, blockquote")) {
@@ -283,28 +292,39 @@ export async function extractArticle(url) {
     const abs = absoluteUrl(raw, url);
     if (abs && /^https?:/.test(abs) && !/\.(svg|gif)(\?|$)/i.test(abs) && !images.includes(abs)) images.push(abs);
   }
-  if (text.join(" ").length < 200) return null;
-  return { text: text.slice(0, 150), images: images.slice(0, 12) };
+  const cleaned = cleanParagraphs(text, parsed.title);
+  if (cleaned.join(" ").length < 200) return null;
+  return { text: cleaned, images: images.slice(0, 12) };
 }
 
 async function fillContent(lang, articles) {
   if (!Readability || !parseHTML) return { attempted: 0, full: 0 };
   const dir = join(DATA_DIR, lang, "content");
-  const todo = articles.filter((a) => a.fingerprint && a.url && !existsSync(join(dir, `${a.fingerprint}.json`))).slice(0, CONTENT_PER_RUN);
+  const todo = [];
+  for (const a of articles) {
+    if (!a.fingerprint || !a.url) continue;
+    let previous = null;
+    try { previous = JSON.parse(await readFile(join(dir, `${a.fingerprint}.json`), "utf8")); } catch { /* not fetched */ }
+    if (previous?.cleaning_version === 2) continue;
+    todo.push({ article: a, previous });
+  }
   let ok = 0;
-  await runParallel(todo, async (a) => {
+  await runParallel(todo.slice(0, CONTENT_PER_RUN), async ({ article: a, previous }) => {
     let body = null;
     try { body = await extractArticle(a.url); } catch { body = null; }
+    if (!body && previous?.text?.length) body = { text: cleanParagraphs(previous.text, a.title), images: previous.images || [] };
     if (body) ok++;
     // Always write a file (even without body) so the article page can open
     // shared links directly and failed pages are not retried every cycle.
-    await writeShard(join(dir, `${a.fingerprint}.json`), {
+    const articleBody = {
       title: a.title, description: a.description, url: a.url, image_url: a.image_url,
       published_at: a.published_at, source_name: a.source_name, language: a.language,
       category: a.category, fingerprint: a.fingerprint,
       text: body?.text || [], images: body?.images || [], full: !!body,
       fetched_at: new Date().toISOString(),
-    });
+      cleaning_version: 2,
+    };
+    await writeShard(join(dir, `${a.fingerprint}.json`), articleBody);
   }, 6);
   console.log(`[content] ${lang}: ${ok}/${todo.length} full articles`);
   return { attempted: todo.length, full: ok };
@@ -452,7 +472,7 @@ async function main() {
       })(new Set()))
       .slice(0, MAX_PER_SHARD);
 
-    const content = await fillContent(lang, merged);
+    const content = await fillContent(lang, [...fresh, ...merged.filter(a => !fresh.includes(a))]);
 
     // copy into the site's database (admin panel, sitemaps); sets a.id
     let db = { checked: 0, inserted: 0 };
@@ -475,7 +495,19 @@ async function main() {
     // new articles only -> Firebase Firestore
     summary.firestore = summary.firestore || {};
     try {
-      const fsr = await syncFirestore(lang, fresh);
+      const pendingPath = join(DATA_DIR, lang, "firestore-pending.json");
+      const pending = await loadShard(pendingPath);
+      const queue = [...new Map([...pending.articles, ...fresh].map(a => [a.fingerprint, a])).values()];
+      // Save before attempting writes: a temporary outage must not lose new stories.
+      await writeShard(pendingPath, { articles: queue });
+      const enriched = await Promise.all(queue.map(async a => {
+        try {
+          const body = JSON.parse(await readFile(join(DATA_DIR, lang, "content", `${a.fingerprint}.json`), "utf8"));
+          return { ...a, text: cleanParagraphs(body.text || [], a.title), images: body.images || [] };
+        } catch { return { ...a, text: [], images: [] }; }
+      }));
+      const fsr = await syncFirestore(lang, enriched);
+      if (fsr.enabled) await writeShard(pendingPath, { articles: [] });
       summary.firestore[lang] = fsr;
       if (fsr.enabled) console.log(`[firestore] ${lang}: ${fsr.written} stored`);
     } catch (e) {
